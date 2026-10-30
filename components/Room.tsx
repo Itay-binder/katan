@@ -20,8 +20,10 @@ export default function Room({ id }: { id: string }) {
 
   const load = useCallback(async () => {
     try {
-      const r = await api.get(id, token.current);
-      if (r.version >= lastVersion.current) { lastVersion.current = r.version; accept(r.view); }
+      const asked = token.current;
+      const r = await api.get(id, asked);
+      // Ignore answers that are older than what we have, or were asked before we joined.
+      if (asked === token.current && r.version >= lastVersion.current) { lastVersion.current = r.version; accept(r.view); }
     } catch (e) {
       if ((e as Error).message.includes('לא נמצא')) setMissing(true);
     }
@@ -45,7 +47,7 @@ export default function Room({ id }: { id: string }) {
   const act = useCallback(async (action: Action, quiet = false) => {
     try {
       const r = await api.act(id, token.current, action);
-      accept(r.view);
+      if (r.version >= lastVersion.current) { lastVersion.current = r.version; accept(r.view); }
       return true;
     } catch (e) {
       if (!quiet) flash((e as Error).message);
@@ -58,6 +60,7 @@ export default function Room({ id }: { id: string }) {
     const r = await api.join(id, name);
     token.current = r.token;
     setToken(id, r.token);
+    lastVersion.current = Math.max(lastVersion.current, r.version);
     accept(r.view);
   }, [id, accept]);
 

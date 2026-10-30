@@ -27,9 +27,9 @@ export const api = {
   get: (id: string, token: string | null) =>
     call<{ view: GameView; version: number }>(`/api/rooms/${id}`, { token }),
   join: (id: string, name: string) =>
-    call<{ token: string; view: GameView }>(`/api/rooms/${id}/join`, { method: 'POST', body: JSON.stringify({ name }) }),
+    call<{ token: string; view: GameView; version: number }>(`/api/rooms/${id}/join`, { method: 'POST', body: JSON.stringify({ name }) }),
   act: (id: string, token: string | null, action: Action) =>
-    call<{ view: GameView }>(`/api/rooms/${id}/action`, { method: 'POST', token, body: JSON.stringify({ action }) }),
+    call<{ view: GameView; version: number }>(`/api/rooms/${id}/action`, { method: 'POST', token, body: JSON.stringify({ action }) }),
 };
 
 let sb: SupabaseClient | null = null;

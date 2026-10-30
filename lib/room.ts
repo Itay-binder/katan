@@ -12,14 +12,14 @@ export const fail = (e: unknown) => {
 };
 
 /** Load → change → save with a version check, retrying when two players act at the same moment. */
-export async function mutateRoom<T>(id: string, fn: (s: GameState) => T): Promise<{ state: GameState; result: T }> {
+export async function mutateRoom<T>(id: string, fn: (s: GameState) => T): Promise<{ state: GameState; result: T; version: number }> {
   for (let attempt = 0; attempt < 5; attempt++) {
     const row = await loadRoom(id);
     if (!row) throw new GameError('החדר לא נמצא');
     const result = fn(row.state);
     if (await saveRoom(id, row.state, row.version)) {
       await notifyRoom(id, row.version + 1);
-      return { state: row.state, result };
+      return { state: row.state, result, version: row.version + 1 };
     }
   }
   throw new GameError('יותר מדי פעולות בבת אחת, נסה שוב');
