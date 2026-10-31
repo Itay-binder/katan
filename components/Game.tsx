@@ -676,6 +676,9 @@ function DiscardSheet({ need, hand, act }: { need: number; hand: ResMap; act: Ac
   return (
     <SheetFrame title={`יצא 7: זרוק ${need} קלפים`}>
       <p style={{ marginTop: 0 }}>יש לך יותר מ־7 קלפים, אז חצי הולכים לבנק. בחרת {resTotal(sel)} מתוך {need}.</p>
+      <p className="field-label">הקלפים שלך (מה שיישאר לך)</p>
+      <Hand r={Object.fromEntries(RES.map(k => [k, hand[k] - sel[k]])) as ResMap} />
+      <p className="field-label">מה לזרוק</p>
       <Stepper value={sel} onChange={setSel} max={hand} />
       <button className="btn" style={{ width: '100%' }} disabled={resTotal(sel) !== need}
         onClick={() => act({ type: 'discard', cards: sel })}>זרוק</button>
