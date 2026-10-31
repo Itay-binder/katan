@@ -489,7 +489,7 @@ function StealSheet({ view, act }: { view: GameView; act: Act }) {
             <button key={id} className="opt" style={{ cursor: 'pointer', font: 'inherit' }} onClick={() => act({ type: 'steal', target: id })}>
               <span className={`dot c-${p.color}`} />
               <span className="grow" style={{ textAlign: 'right', fontWeight: 800 }}>{p.name}</span>
-              <span className="cost">{p.resCount} קלפים</span>
+              <span className="cost">⭐ {p.publicVp} נקודות · {p.resCount} קלפים</span>
             </button>
           );
         })}
