@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import Board, { RES_ICON, type PickMode } from './Board';
+import { ChatPanel, useChat, useVoice } from './Social';
 import {
   affordable, piecesLeft, tradeRatios, validCities, validRoads, validSettlements,
   validSetupRoads, validSetupSettlements,
@@ -12,14 +13,16 @@ import {
 } from '@/lib/engine/types';
 
 type Act = (a: Action, quiet?: boolean) => Promise<boolean>;
-type Sheet = null | 'build' | 'trade' | 'dev' | 'log' | 'end' | 'emoji';
-const EMOJIS = ['👍', '😂', '😡', '😱', '🔥', '👏', '🤝', '😈', '🙏', '🐑', '🧱', '😴'];
+type Sheet = null | 'build' | 'trade' | 'dev' | 'log' | 'end' | 'emoji' | 'chat' | 'voice';
+const EMOJIS = ['👍', '😂', '😡', '😱', '🔥', '🖕🏻', '🤝', '😈', '🙏', '🐑', '🧱', '😴'];
 
 const costIcons = (c: Partial<ResMap>) =>
   RES.filter(k => c[k]).map(k => `${RES_ICON[k]}${c[k]! > 1 ? '×' + c[k] : ''}`).join(' ');
 const resLine = (r: ResMap) => RES.filter(k => r[k]).map(k => `${r[k]} ${RES_ICON[k]}`).join('  ');
 
-export default function Game({ view, act, skew, react }: { view: GameView; act: Act; skew: number; react: (e: string) => void }) {
+export default function Game({ view, act, skew, react, roomId, token }: {
+  view: GameView; act: Act; skew: number; react: (e: string) => void; roomId: string; token: string | null;
+}) {
   const me = view.players.find(p => p.id === view.you) ?? null;
   const curP = view.players[view.current];
   const myTurn = view.phase === 'playing' && !!me && curP?.id === me.id;
@@ -36,15 +39,30 @@ export default function Game({ view, act, skew, react }: { view: GameView; act: 
   useEffect(() => { if (!myTurn && (sheet === 'build' || sheet === 'trade')) setSheet(null); }, [myTurn, sheet]);
 
   // Floating banners for what the other players just did.
-  const [news, setNews] = useState<{ id: number; text: string }[]>([]);
+  const [news, setNews] = useState<{ id: string; text: string; chat?: boolean }[]>([]);
+  const pushNews = (items: { id: string; text: string; chat?: boolean }[]) => {
+    if (!items.length) return;
+    setNews(n => [...n, ...items].slice(-3));
+    for (const it of items) setTimeout(() => setNews(n => n.filter(o => o.id !== it.id)), 4500);
+  };
   const seenLog = useRef(view.log[view.log.length - 1]?.id ?? 0);
   useEffect(() => {
     const fresh = view.log.filter(l => (l.id ?? 0) > seenLog.current && l.by !== me?.id);
     seenLog.current = view.log[view.log.length - 1]?.id ?? seenLog.current;
-    if (!fresh.length) return;
-    setNews(n => [...n, ...fresh.map(l => ({ id: l.id, text: l.text }))].slice(-3));
-    for (const l of fresh) setTimeout(() => setNews(n => n.filter(o => o.id !== l.id)), 4500);
+    pushNews(fresh.map(l => ({ id: `l${l.id}`, text: l.text })));
   }, [view.log, me?.id]);
+
+  // Chat and voice call.
+  const [unread, setUnread] = useState(0);
+  const chatOpen = useRef(false);
+  chatOpen.current = sheet === 'chat';
+  const chat = useChat(roomId, me?.id ?? null, m => {
+    if (chatOpen.current) return;
+    setUnread(u => u + 1);
+    pushNews([{ id: `c${m.id}`, text: `💬 ${m.name}: ${m.text}`, chat: true }]);
+  });
+  const voice = useVoice(roomId, me?.id ?? null);
+  const vs = voice.state;
 
   // Big "your turn" banner each time the turn comes to you.
   const [yourTurn, setYourTurn] = useState(false);
@@ -95,18 +113,34 @@ export default function Game({ view, act, skew, react }: { view: GameView; act: 
   return (
     <div className="game">
       <div className="topbar">
-        {view.players.map((p, i) => <PlayerChip key={p.id} p={p} view={view} turn={i === view.current} />)}
+        {view.players.map((p, i) => (
+          <PlayerChip key={p.id} p={p} view={view} turn={i === view.current}
+            inCall={vs.members.includes(p.id)} talking={vs.speaking.includes(p.id)} />
+        ))}
       </div>
 
       <div className="statusbar">
         {view.dice && <div className="dice"><span className="die">{view.dice[0]}</span><span className="die">{view.dice[1]}</span></div>}
         <span className="msg">{statusText(view, me, myTurn, build)}</span>
         {secsLeft !== null && view.phase === 'playing' && <span className={`timer ${secsLeft <= 10 ? 'low' : ''}`}>{secsLeft}</span>}
-        {me && <button className="btn ghost small" onClick={() => setSheet('emoji')} aria-label="אימוג'י">😀</button>}
         <button className="btn ghost small" onClick={() => setSheet('log')} aria-label="יומן">📜</button>
       </div>
 
-      <Board view={view} mode={mode} />
+      <div className="board-area">
+        <Board view={view} mode={mode} />
+        {me && (
+          <div className="side-tools">
+            <button className={`tool ${vs.joined ? 'on' : ''}`} onClick={() => (vs.joined ? setSheet('voice') : voice.join())} aria-label="שיחה">
+              {vs.joining ? '…' : vs.joined ? (vs.muted ? '🔇' : '🎙️') : '📞'}
+              {!vs.joined && vs.members.length > 0 && <span className="badge green">{vs.members.length}</span>}
+            </button>
+            <button className="tool" onClick={() => { setSheet('chat'); setUnread(0); }} aria-label="צ׳אט">
+              💬{unread > 0 && <span className="badge">{unread}</span>}
+            </button>
+            <button className="tool" onClick={() => setSheet('emoji')} aria-label="אימוג׳י">😀</button>
+          </div>
+        )}
+      </div>
 
       {me && (
         <div className="bottom">
@@ -148,6 +182,29 @@ export default function Game({ view, act, skew, react }: { view: GameView; act: 
           </div>
         </SheetFrame>
       )}
+      {sheet === 'chat' && (
+        <ChatPanel roomId={roomId} token={token} meId={me?.id ?? null} messages={chat.messages} add={chat.add}
+          close={() => { setSheet(null); setUnread(0); }} />
+      )}
+      {sheet === 'voice' && vs.joined && (
+        <SheetFrame title="שיחה קולית" close={() => setSheet(null)}>
+          <ul className="plist" style={{ marginTop: 0 }}>
+            {view.players.filter(p => vs.members.includes(p.id)).map(p => (
+              <li key={p.id}>
+                <span className={`dot c-${p.color}`} />{p.name}{p.id === me?.id ? ' (אתה)' : ''}
+                <span className="tag">
+                  {vs.failed.includes(p.id) ? 'לא מצליח להתחבר' : vs.speaking.includes(p.id) ? 'מדבר…' : ''}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <div className="row" style={{ gap: 8, marginTop: 10 }}>
+            <button className="btn light grow" onClick={voice.toggleMute}>{vs.muted ? '🎙️ בטל השתקה' : '🔇 השתק אותי'}</button>
+            <button className="btn danger grow" onClick={() => { voice.leave(); setSheet(null); }}>📵 צא מהשיחה</button>
+          </div>
+        </SheetFrame>
+      )}
+      {vs.error && <div className="toast" role="alert">{vs.error}</div>}
       {sheet === 'emoji' && (
         <SheetFrame title="שלח לכולם" close={() => setSheet(null)}>
           <div className="emojis">
@@ -161,7 +218,7 @@ export default function Game({ view, act, skew, react }: { view: GameView; act: 
       {view.phase === 'ended' && <WinOverlay view={view} />}
       {news.length > 0 && (
         <div className="news">
-          {news.map(n => <div key={n.id} className="news-item" onClick={() => setNews(x => x.filter(o => o.id !== n.id))}>{n.text}</div>)}
+          {news.map(n => <div key={n.id} className={`news-item ${n.chat ? 'chat' : ''}`} onClick={() => setNews(x => x.filter(o => o.id !== n.id))}>{n.text}</div>)}
         </div>
       )}
       {yourTurn && view.phase === 'playing' && me && (
@@ -205,11 +262,11 @@ function statusText(v: GameView, me: PublicPlayer | null, myTurn: boolean, build
   }
 }
 
-function PlayerChip({ p, view, turn }: { p: PublicPlayer; view: GameView; turn: boolean }) {
+function PlayerChip({ p, view, turn, inCall, talking }: { p: PublicPlayer; view: GameView; turn: boolean; inCall: boolean; talking: boolean }) {
   return (
-    <div className={`pchip ${turn ? 'turn' : ''}`}>
+    <div className={`pchip ${turn ? 'turn' : ''} ${talking ? 'talking' : ''}`}>
       <span className={`dot c-${p.color}`} />
-      <span>{p.name}{p.id === view.you ? ' (אתה)' : ''}</span>
+      <span>{p.name}{p.id === view.you ? ' (אתה)' : ''}{inCall ? ' 🎧' : ''}</span>
       <span className="vp">{p.publicVp}</span>
       <span className="meta">
         🂠{p.resCount} · 🃏{p.devCount}{p.knights ? ` · ⚔️${p.knights}` : ''}

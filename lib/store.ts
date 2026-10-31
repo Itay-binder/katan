@@ -43,14 +43,44 @@ export async function saveRoom(id: string, state: GameState, version: number): P
   return !!data?.length;
 }
 
-/** Tells every open screen in the room to refetch. Hands are never sent here, only the version. */
-export async function notifyRoom(id: string, version: number): Promise<void> {
+async function broadcast(id: string, event: string, payload: unknown): Promise<void> {
   if (!usingSupabase) return;
   try {
     await fetch(`${url}/realtime/v1/api/broadcast`, {
       method: 'POST',
       headers: { apikey: key!, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages: [{ topic: `katan-${id}`, event: 'update', payload: { version } }] }),
+      body: JSON.stringify({ messages: [{ topic: `katan-${id}`, event, payload }] }),
     });
   } catch { /* clients also refetch on focus */ }
+}
+
+/** Tells every open screen in the room to refetch. Hands are never sent here, only the version. */
+export const notifyRoom = (id: string, version: number) => broadcast(id, 'update', { version });
+
+export interface ChatMsg { id: number; player_id: string; name: string; color: string; text: string; created_at: string }
+const memChat = ((g as unknown as { __katanChat?: Map<string, ChatMsg[]> }).__katanChat ||= new Map());
+
+export async function listChat(roomId: string): Promise<ChatMsg[]> {
+  if (!usingSupabase) return memChat.get(roomId) ?? [];
+  const { data, error } = await db().from('katan_chat')
+    .select('id, player_id, name, color, text, created_at').eq('room_id', roomId).order('id', { ascending: false }).limit(100);
+  if (error) throw error;
+  return (data as ChatMsg[]).reverse();
+}
+
+/** Saves a chat line and pushes it to everyone in the room. */
+export async function addChat(roomId: string, m: Omit<ChatMsg, 'id' | 'created_at'>): Promise<ChatMsg> {
+  let saved: ChatMsg;
+  if (!usingSupabase) {
+    const list = memChat.get(roomId) ?? [];
+    saved = { ...m, id: list.length + 1, created_at: new Date().toISOString() };
+    memChat.set(roomId, [...list, saved].slice(-100));
+  } else {
+    const { data, error } = await db().from('katan_chat').insert({ room_id: roomId, ...m })
+      .select('id, player_id, name, color, text, created_at').single();
+    if (error) throw error;
+    saved = data as ChatMsg;
+  }
+  await broadcast(roomId, 'chat', saved);
+  return saved;
 }

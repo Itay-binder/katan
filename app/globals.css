@@ -200,3 +200,23 @@ h1, h2, h3, .display { font-family: 'Secular One', 'Assistant', sans-serif; font
 .win-parts { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 13px; color: var(--ink-soft); margin-top: 4px; }
 .win-dev { font-size: 13px; color: var(--ink-soft); margin-top: 4px; }
 .win-back { position: fixed; top: 112px; left: 50%; transform: translateX(-50%); z-index: 30; box-shadow: var(--shadow); }
+
+.board-area { flex: 1; min-height: 0; position: relative; display: flex; flex-direction: column; }
+.side-tools { position: absolute; right: 10px; top: 10px; display: flex; flex-direction: column; gap: 8px; z-index: 5; }
+.side-tools .tool { position: relative; width: 44px; height: 44px; border-radius: 12px; border: none; background: rgba(251,244,226,.92); font-size: 22px; box-shadow: var(--shadow); }
+.side-tools .tool.on { background: #3fae5a; }
+.side-tools .badge { position: absolute; top: -5px; left: -5px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 99px; background: var(--danger); color: #fff; font-size: 12px; font-weight: 800; display: grid; place-items: center; }
+.side-tools .badge.green { background: #3fae5a; }
+.pchip.talking { box-shadow: 0 0 0 3px #3fae5a, 0 0 14px #3fae5a; }
+.btn.danger { background: var(--danger); color: #fff; }
+.news-item.chat { border-color: #3fae5a; font-weight: 700; }
+.sheet.chat { display: flex; flex-direction: column; height: 75dvh; }
+.chat-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; padding: 4px 0 8px; }
+.chat-empty { color: var(--ink-soft); text-align: center; margin-top: 30px; }
+.chat-msg { align-self: flex-start; max-width: 80%; background: #fff; border-radius: 14px; padding: 7px 11px; display: flex; flex-direction: column; box-shadow: 0 1px 2px rgba(0,0,0,.12); word-break: break-word; }
+.chat-msg.mine { align-self: flex-end; background: #dcf3cf; }
+.chat-name { font-size: 12px; font-weight: 800; }
+.t-red { color: var(--p-red); } .t-blue { color: var(--p-blue); } .t-orange { color: var(--p-orange); } .t-green { color: var(--p-green); }
+.chat-err { color: var(--danger); margin: 4px 0; font-size: 14px; }
+.chat-form { display: flex; gap: 8px; padding-top: 6px; }
+.chat-form input { flex: 1; min-width: 0; font: inherit; font-size: 16px; padding: 10px 12px; border-radius: 12px; border: 2px solid #d8c9a3; background: #fff; }

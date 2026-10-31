@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { api, getToken, hasRealtime, sendEmoji, setToken, subscribeRoom, type EmojiMsg } from '@/lib/client';
+import { api, getToken, hasRealtime, onRoomEvent, sendRoomEvent, setToken, subscribeRoom, type EmojiMsg } from '@/lib/client';
 import type { Action, GameView } from '@/lib/engine/types';
 import Lobby from './Lobby';
 import Game from './Game';
@@ -39,14 +39,15 @@ export default function Room({ id }: { id: string }) {
   useEffect(() => {
     token.current = getToken(id);
     load();
-    const unsub = subscribeRoom(id, load, showEmoji);
+    const unsub = subscribeRoom(id, load);
+    const offEmoji = onRoomEvent<EmojiMsg>('emoji', showEmoji);
     // Fallback refresh: realtime normally does the work, so this is slow and only while the tab is visible.
     const every = hasRealtime ? 60_000 : 2_000;
     const iv = setInterval(() => { if (document.visibilityState === 'visible') load(); }, every);
     const onVis = () => { if (document.visibilityState === 'visible') load(); };
     document.addEventListener('visibilitychange', onVis);
     window.addEventListener('focus', onVis);
-    return () => { unsub(); clearInterval(iv); document.removeEventListener('visibilitychange', onVis); window.removeEventListener('focus', onVis); };
+    return () => { unsub(); offEmoji(); clearInterval(iv); document.removeEventListener('visibilitychange', onVis); window.removeEventListener('focus', onVis); };
   }, [id, load, showEmoji]);
 
   const flash = (m: string) => { setToast(m); setTimeout(() => setToast(''), 2800); };
@@ -83,13 +84,13 @@ export default function Room({ id }: { id: string }) {
     <>
       {view.phase === 'lobby'
         ? <Lobby view={view} act={act} join={join} />
-        : <Game view={view} act={act} skew={skew.current}
+        : <Game view={view} act={act} skew={skew.current} roomId={id} token={token.current}
             react={e => {
               const me = view.players.find(p => p.id === view.you);
               if (!me) return;
               const m = { e, name: me.name, color: me.color };
               showEmoji(m);
-              sendEmoji(id, m);
+              sendRoomEvent(id, 'emoji', m);
             }} />}
       {floats.map(f => (
         <div key={f.key} className="floater" style={{ left: `${f.x}%` }}>
