@@ -24,11 +24,15 @@ const TILE_W = Math.sqrt(3) * S; // pointy-top hex width
 const pts = (vs: number[]) => vs.map(v => `${VERTICES[v].x * S},${VERTICES[v].y * S}`).join(' ');
 
 // Fixed board frame (with room for ports outside the coast)
-const PAD = 0.98 * S;
-const minX = Math.min(...VERTICES.map(v => v.x)) * S - PAD;
-const maxX = Math.max(...VERTICES.map(v => v.x)) * S + PAD;
-const minY = Math.min(...VERTICES.map(v => v.y)) * S - PAD;
-const maxY = Math.max(...VERTICES.map(v => v.y)) * S + PAD;
+// Sea frame: a flat-topped hexagon of water around the island, like the printed frame pieces.
+const FRAME_R = 5.55 * S;
+const FRAME = Array.from({ length: 6 }, (_, i) => {
+  const a = (Math.PI / 3) * i;
+  return `${FRAME_R * Math.cos(a)},${FRAME_R * Math.sin(a)}`;
+}).join(' ');
+const PAD = 0.12 * S;
+const minX = -FRAME_R - PAD, maxX = FRAME_R + PAD;
+const minY = -FRAME_R * Math.sin(Math.PI / 3) - PAD, maxY = FRAME_R * Math.sin(Math.PI / 3) + PAD;
 const BW = maxX - minX, BH = maxY - minY;
 
 export default function Board({ view, mode }: { view: GameView; mode: PickMode }) {
@@ -111,9 +115,24 @@ export default function Board({ view, mode }: { view: GameView; mode: PickMode }
           <filter id="rbShadow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="2.4" /></filter>
         </defs>
 
-        {/* island base */}
+        {/* sea frame with a gold edge */}
+        <defs>
+          <pattern id="sea" patternUnits="userSpaceOnUse" width={270} height={97.5}>
+            <image href="/sea.webp" width={270} height={97.5} preserveAspectRatio="none" />
+          </pattern>
+          <filter id="foamBlur" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="3" /></filter>
+        </defs>
+        <polygon points={FRAME} fill="#1f8fae" />
+        <polygon points={FRAME} fill="url(#sea)" />
+        <polygon points={FRAME} fill="none" stroke="#7a5512" strokeWidth={7} strokeLinejoin="round" />
+        <polygon points={FRAME} fill="none" stroke="#f0c84d" strokeWidth={4} strokeLinejoin="round" />
+
+        {/* island base: white surf, then a sand beach */}
         {HEXES.map(h => (
-          <polygon key={`b${h.id}`} points={pts(h.vertices)} fill="#e9d9a6" stroke="#e9d9a6" strokeWidth={14} strokeLinejoin="round" />
+          <polygon key={`f${h.id}`} points={pts(h.vertices)} fill="#fff" stroke="#fff" strokeWidth={30} strokeLinejoin="round" opacity={.55} filter="url(#foamBlur)" />
+        ))}
+        {HEXES.map(h => (
+          <polygon key={`b${h.id}`} points={pts(h.vertices)} fill="#ecd29a" stroke="#ecd29a" strokeWidth={16} strokeLinejoin="round" />
         ))}
 
         {/* ports */}
