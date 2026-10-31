@@ -116,7 +116,7 @@ export default function Game({ view, act, skew, react }: { view: GameView; act: 
       {sheet === 'dev' && me && <DevSheet view={view} meId={me.id} myTurn={myTurn} act={act} close={() => setSheet(null)} />}
       {sheet === 'log' && <LogSheet view={view} close={() => setSheet(null)} />}
       {sheet === 'end' && myTurn && (
-        <SheetFrame title="בטוח שאתה רוצה לסיים את התור?" close={() => setSheet(null)}>
+        <SheetFrame title="לסיים את התור?" close={() => setSheet(null)}>
           <div className="row" style={{ gap: 8 }}>
             <button className="btn grow" onClick={() => { setSheet(null); act({ type: 'endTurn' }); }}>כן, סיים תור</button>
             <button className="btn light grow" onClick={() => setSheet(null)}>עוד לא</button>
