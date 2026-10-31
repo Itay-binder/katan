@@ -31,7 +31,8 @@ export interface Trade {
   responses: Record<string, 'accept' | 'reject'>;
 }
 
-export interface LogEntry { t: number; text: string }
+/** `by`: the player whose move produced the message (null = nobody in particular). */
+export interface LogEntry { id: number; t: number; text: string; by?: string | null }
 
 export interface GameState {
   id: string;

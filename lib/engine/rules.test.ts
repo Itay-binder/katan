@@ -136,6 +136,29 @@ describe('turn flow', () => {
     expect(['robber', 'discard']).toContain(s.sub);
   });
 
+  it('tags each message with the player who made the move, and names the robber tile', () => {
+    const s = setupGame(3);
+    playSetup(s);
+    s.turnNo = 10;
+    let i = 0;
+    const me = s.players[0].id;
+    applyAction(s, me, { type: 'roll' }, 0, () => [0.4, 0.6][i++ % 2]);
+    const last = s.log[s.log.length - 1];
+    expect(last.by).toBe(me);
+    expect(s.log.every((l, k) => k === 0 || l.id > s.log[k - 1].id)).toBe(true);
+    for (const id of Object.keys(s.discards)) {
+      const p = s.players.find(x => x.id === id)!;
+      const cards = emptyRes(); let need = s.discards[id];
+      for (const k of ['brick', 'lumber', 'wool', 'grain', 'ore'] as const) { const n = Math.min(need, p.resources[k]); cards[k] = n; need -= n; }
+      applyAction(s, id, { type: 'discard', cards }, 0);
+    }
+    const hex = HEXES.find(h => h.id !== s.robber && s.hexes[h.id].terrain !== 'desert')!.id;
+    applyAction(s, me, { type: 'moveRobber', hex }, 0);
+    const msg = s.log.find(l => l.text.includes('שם את השודד'))!;
+    expect(msg.text).toContain(String(s.hexes[hex].number));
+    expect(msg.by).toBe(me);
+  });
+
   it('rolling a 7 forces discards then robber', () => {
     const s = setupGame(3);
     playSetup(s);

@@ -67,7 +67,7 @@ export function joinGame(s: GameState, name: string, rng: Rng = Math.random): Pl
 // ---------- helpers ----------
 
 function log(s: GameState, text: string) {
-  s.log.push({ t: Date.now(), text });
+  s.log.push({ id: (s.log[s.log.length - 1]?.id ?? 0) + 1, t: Date.now(), text });
   if (s.log.length > LOG_KEEP) s.log.splice(0, s.log.length - LOG_KEEP);
 }
 
@@ -79,6 +79,12 @@ const player = (s: GameState, id: string) => {
 const cur = (s: GameState) => s.players[s.current];
 const fmt = (r: Partial<ResMap>) =>
   RES.filter(k => r[k]).map(k => `${r[k]} ${RES_HE[k]}`).join(', ');
+/** "חיטה 8" style name of a tile, for messages. */
+const hexName = (s: GameState, h: number) => {
+  const x = s.hexes[h];
+  return x.terrain === 'desert' ? 'המדבר' : `${RES_HE[x.terrain]} ${x.number}`;
+};
+const spotName = (s: GameState, v: number) => VERTICES[v].hexes.map(h => hexName(s, h)).join(', ');
 
 function pay(s: GameState, p: Player, cost: Partial<ResMap>) {
   if (!canAfford(p.resources, cost)) throw new GameError('אין מספיק משאבים');
@@ -202,6 +208,15 @@ function requireTurn(s: GameState, pid: string, ...subs: GameState['sub'][]) {
 
 /** Applies an action in place. Throws GameError when illegal. */
 export function applyAction(s: GameState, pid: string, a: Action, now: number, rng: Rng = Math.random): void {
+  const before = s.log[s.log.length - 1]?.id ?? 0;
+  try { reduce(s, pid, a, now, rng); } finally {
+    // Messages a move produced carry who made it, so others can be shown what happened.
+    // A timeout is played for whoever's clock ran out, not by the player who reported it.
+    for (const l of s.log) if (l.id > before && l.by === undefined) l.by = a.type === 'timeout' ? null : pid;
+  }
+}
+
+function reduce(s: GameState, pid: string, a: Action, now: number, rng: Rng): void {
   switch (a.type) {
     case 'setColor': {
       if (s.phase !== 'lobby') throw new GameError('המשחק כבר התחיל');
@@ -295,7 +310,8 @@ export function applyAction(s: GameState, pid: string, a: Action, now: number, r
       requireTurn(s, pid, 'robber');
       if (!HEXES[a.hex] || a.hex === s.robber) throw new GameError('צריך להזיז את השודד למשבצת אחרת');
       s.robber = a.hex;
-      log(s, `${cur(s).name} הזיז את השודד`);
+      const blocked = robbableOn(s, a.hex, '').map(id => player(s, id).name);
+      log(s, `${cur(s).name} שם את השודד על ${hexName(s, a.hex)}${blocked.length ? ` וחוסם את ${blocked.join(' ו')}` : ''}`);
       afterRobberMoved(s, rng);
       return;
     }
@@ -329,7 +345,7 @@ export function applyAction(s: GameState, pid: string, a: Action, now: number, r
       if (piecesLeft(s, pid).settlement <= 0) throw new GameError('נגמרו לך היישובים');
       pay(s, p, COST.settlement);
       s.buildings[a.vertex] = { owner: pid, type: 'settlement' };
-      log(s, `${p.name} בנה יישוב`);
+      log(s, `${p.name} בנה יישוב ליד ${spotName(s, a.vertex)}`);
       updateLongestRoad(s); // a settlement can cut an opponent's road
       checkWin(s);
       return;
@@ -341,7 +357,7 @@ export function applyAction(s: GameState, pid: string, a: Action, now: number, r
       if (piecesLeft(s, pid).city <= 0) throw new GameError('נגמרו לך הערים');
       pay(s, p, COST.city);
       s.buildings[a.vertex] = { owner: pid, type: 'city' };
-      log(s, `${p.name} בנה עיר`);
+      log(s, `${p.name} בנה עיר ליד ${spotName(s, a.vertex)}`);
       checkWin(s);
       return;
     }
@@ -431,8 +447,8 @@ export function applyAction(s: GameState, pid: string, a: Action, now: number, r
         me.resources[k] += t.get[k] - t.give[k];
         them.resources[k] += t.give[k] - t.get[k];
       }
+      log(s, `${me.name} נתן ל${them.name} ${fmt(t.give)} וקיבל ${fmt(t.get)}`);
       s.trade = null;
-      log(s, `${me.name} ו${them.name} סגרו עסקה`);
       return;
     }
     case 'cancelTrade': {

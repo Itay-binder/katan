@@ -35,6 +35,17 @@ export default function Game({ view, act, skew, react }: { view: GameView; act: 
   useEffect(() => { if (!myTurn || view.sub !== 'main') setBuild(null); }, [myTurn, view.sub]);
   useEffect(() => { if (!myTurn && (sheet === 'build' || sheet === 'trade')) setSheet(null); }, [myTurn, sheet]);
 
+  // Floating banners for what the other players just did.
+  const [news, setNews] = useState<{ id: number; text: string }[]>([]);
+  const seenLog = useRef(view.log[view.log.length - 1]?.id ?? 0);
+  useEffect(() => {
+    const fresh = view.log.filter(l => (l.id ?? 0) > seenLog.current && l.by !== me?.id);
+    seenLog.current = view.log[view.log.length - 1]?.id ?? seenLog.current;
+    if (!fresh.length) return;
+    setNews(n => [...n, ...fresh.map(l => ({ id: l.id, text: l.text }))].slice(-3));
+    for (const l of fresh) setTimeout(() => setNews(n => n.filter(o => o.id !== l.id)), 4500);
+  }, [view.log, me?.id]);
+
   // Big "your turn" banner each time the turn comes to you.
   const [yourTurn, setYourTurn] = useState(false);
   const wasMine = useRef(myTurn);
@@ -148,6 +159,11 @@ export default function Game({ view, act, skew, react }: { view: GameView; act: 
       {myDiscard > 0 && view.sub === 'discard' && me && <DiscardSheet need={myDiscard} hand={me.resources!} act={act} />}
       {myTurn && view.sub === 'steal' && <StealSheet view={view} act={act} />}
       {view.phase === 'ended' && <WinOverlay view={view} />}
+      {news.length > 0 && (
+        <div className="news">
+          {news.map(n => <div key={n.id} className="news-item" onClick={() => setNews(x => x.filter(o => o.id !== n.id))}>{n.text}</div>)}
+        </div>
+      )}
       {yourTurn && view.phase === 'playing' && me && (
         <div className="yourturn" onClick={() => setYourTurn(false)}>
           <div className={`yt c-${me.color}`}>התור שלך!</div>
