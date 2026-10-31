@@ -2,6 +2,7 @@
 // "Add to home screen": the native install prompt where the browser offers one (Android Chrome),
 // step-by-step instructions everywhere else (iPhone never offers a prompt).
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 interface InstallPrompt extends Event { prompt: () => Promise<void>; userChoice: Promise<{ outcome: string }> }
 
@@ -68,7 +69,8 @@ export default function InstallButton() {
   return (
     <>
       <button className="btn light install-btn" onClick={click}>📲 הוסף למסך הבית</button>
-      {open && (
+      {/* Portal: the home card is animated, which would trap a fixed sheet inside it. */}
+      {open && createPortal(
         <div className="sheet-back" onClick={() => setOpen(false)}>
           <div className="sheet" onClick={e => e.stopPropagation()}>
             <div className="row" style={{ marginBottom: 6 }}>
@@ -83,7 +85,8 @@ export default function InstallButton() {
               {info.steps.map(s => <li key={s}>{s}</li>)}
             </ol>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </>
   );
