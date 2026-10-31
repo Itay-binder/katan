@@ -361,11 +361,6 @@ button.rc { border: 3px solid transparent; }
 
 /* bought a development card */
 .dev-reveal { pointer-events: none; animation: fade .15s, diceout 2.2s ease-in forwards; }
-.dev-card { width: min(62vw, 240px); aspect-ratio: 911 / 1397; border-radius: 16px; border: 6px solid #e2bd52; background: radial-gradient(circle at 50% 30%, #fff8e4, #f1dfae 70%); box-shadow: 0 14px 40px rgba(0,0,0,.5), inset 0 0 0 3px #f8eecf; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 18px; text-align: center; color: var(--ink); animation: flipin .45s ease-out; }
-.dev-card .dev-ico { font-size: 72px; line-height: 1; filter: drop-shadow(0 4px 6px rgba(0,0,0,.3)); }
-.dev-card .dev-name { font-family: 'Secular One', sans-serif; font-size: 28px; }
-.dev-card .dev-desc { font-size: 14px; color: var(--ink-soft); line-height: 1.35; }
-.dev-knight { border-color: #b23a3a; } .dev-vp { border-color: #2f6fd6; } .dev-monopoly { border-color: #2e9e5b; }
 
 /* room code */
 .code-box { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; padding: 10px 14px; border-radius: 12px; border: 2px dashed #c9a347; background: #fff8e4; font: inherit; color: var(--ink); cursor: pointer; }
