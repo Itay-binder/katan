@@ -243,3 +243,7 @@ h1, h2, h3, .display { font-family: 'Secular One', 'Assistant', sans-serif; font
 .pchip.offline .dot { outline: 2px dashed var(--danger); outline-offset: 2px; }
 .skipbar { display: flex; align-items: center; gap: 8px; margin: 0 8px 6px; padding: 8px 12px; border-radius: 12px; background: #fbe3c4; color: var(--ink); font-weight: 700; font-size: 14px; }
 .skipbar span { flex: 1; }
+
+/* Full-screen home-screen app on iPhone: keep content clear of the notch. */
+.game { padding-top: env(safe-area-inset-top); }
+.home { padding-top: calc(24px + env(safe-area-inset-top)); }

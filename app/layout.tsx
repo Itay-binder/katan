@@ -4,6 +4,9 @@ import './globals.css';
 export const metadata: Metadata = {
   title: 'Katan',
   description: 'משחק מתיישבים מרחוק עם חברים. פותחים חדר, שולחים לינק, משחקים.',
+  // "Add to Home Screen" on iPhone opens it full screen with its own icon, like an app.
+  appleWebApp: { capable: true, title: 'Katan', statusBarStyle: 'black-translucent' },
+  icons: { apple: '/apple-touch-icon.png', icon: '/icon-192.png' },
 };
 
 export const viewport: Viewport = {
@@ -12,6 +15,7 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   themeColor: '#0f3b47',
+  viewportFit: 'cover',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
