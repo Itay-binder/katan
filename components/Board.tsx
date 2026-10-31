@@ -169,6 +169,19 @@ export default function Board({ view, mode }: { view: GameView; mode: PickMode }
         {/* the tile under the robber is dimmed so the blocked tile is obvious */}
         <polygon points={pts(HEXES[view.robber].vertices)} fill="rgba(15,10,30,.38)" pointerEvents="none" />
 
+        {/* roads */}
+        {Object.entries(view.roads).map(([eid, owner]) => {
+          const e = EDGES[+eid], a = VERTICES[e.a], b = VERTICES[e.b];
+          const sx = a.x + (b.x - a.x) * 0.14, sy = a.y + (b.y - a.y) * 0.14;
+          const ex = a.x + (b.x - a.x) * 0.86, ey = a.y + (b.y - a.y) * 0.86;
+          return (
+            <g key={`r${eid}`}>
+              <line x1={sx * S} y1={sy * S} x2={ex * S} y2={ey * S} stroke="#2a1d10" strokeWidth={11} strokeLinecap="round" />
+              <line x1={sx * S} y1={sy * S} x2={ex * S} y2={ey * S} stroke={colorOf[owner]} strokeWidth={7} strokeLinecap="round" />
+            </g>
+          );
+        })}
+
         {/* robber */}
         {(() => {
           const h = HEXES[view.robber];
@@ -196,19 +209,6 @@ export default function Board({ view, mode }: { view: GameView; mode: PickMode }
             </g>
           );
         })()}
-
-        {/* roads */}
-        {Object.entries(view.roads).map(([eid, owner]) => {
-          const e = EDGES[+eid], a = VERTICES[e.a], b = VERTICES[e.b];
-          const sx = a.x + (b.x - a.x) * 0.14, sy = a.y + (b.y - a.y) * 0.14;
-          const ex = a.x + (b.x - a.x) * 0.86, ey = a.y + (b.y - a.y) * 0.86;
-          return (
-            <g key={`r${eid}`}>
-              <line x1={sx * S} y1={sy * S} x2={ex * S} y2={ey * S} stroke="#2a1d10" strokeWidth={11} strokeLinecap="round" />
-              <line x1={sx * S} y1={sy * S} x2={ex * S} y2={ey * S} stroke={colorOf[owner]} strokeWidth={7} strokeLinecap="round" />
-            </g>
-          );
-        })}
 
         {/* buildings */}
         {Object.entries(view.buildings).map(([vid, b]) => {
