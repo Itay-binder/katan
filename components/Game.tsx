@@ -508,20 +508,53 @@ function LogSheet({ view, close }: { view: GameView; close: () => void }) {
   );
 }
 
+function scoreParts(view: GameView, p: PublicPlayer) {
+  const own = Object.values(view.buildings).filter(b => b.owner === p.id);
+  const vpCards = p.dev?.filter(d => d.type === 'vp').length ?? 0;
+  return [
+    { label: 'יישובים', n: own.filter(b => b.type === 'settlement').length, pts: 1 },
+    { label: 'ערים', n: own.filter(b => b.type === 'city').length, pts: 2 },
+    { label: 'הדרך הארוכה', n: view.longestRoad === p.id ? 1 : 0, pts: 2 },
+    { label: 'הצבא הגדול', n: view.largestArmy === p.id ? 1 : 0, pts: 2 },
+    { label: 'קלפי נקודת ניצחון', n: vpCards, pts: 1 },
+  ].filter(x => x.n > 0);
+}
+
 function WinOverlay({ view }: { view: GameView }) {
+  const [hidden, setHidden] = useState(false);
   const w = view.players.find(p => p.id === view.winner);
   const ranked = [...view.players].sort((a, b) => b.publicVp - a.publicVp);
+  if (hidden) return (
+    <button className="btn win-back" onClick={() => setHidden(false)}>🏆 חזרה לתוצאות</button>
+  );
   return (
     <div className="overlay">
-      <div className="card" style={{ textAlign: 'center', maxWidth: 380, width: '100%' }}>
-        <div style={{ fontSize: 56 }}>🏆</div>
-        <h2 style={{ margin: '4px 0 12px', fontSize: 30 }}>{w?.name} ניצח!</h2>
-        <ul className="plist" style={{ marginBottom: 16 }}>
+      <div className="card win-card">
+        <div style={{ fontSize: 52, textAlign: 'center' }}>🏆</div>
+        <h2 style={{ margin: '0 0 12px', fontSize: 30, textAlign: 'center' }}>{w?.name} ניצח!</h2>
+        <div className="win-list">
           {ranked.map(p => (
-            <li key={p.id}><span className={`dot c-${p.color}`} />{p.name}<span className="tag" style={{ fontSize: 17, fontWeight: 800 }}>{p.publicVp}</span></li>
+            <div key={p.id} className={`win-row ${p.id === view.winner ? 'won' : ''}`}>
+              <div className="row">
+                <span className={`dot c-${p.color}`} />
+                <b className="grow">{p.name}</b>
+                <span className="win-vp">{p.publicVp}</span>
+              </div>
+              <div className="win-parts">
+                {scoreParts(view, p).map(x => (
+                  <span key={x.label}>{x.label}{x.pts === 2 && x.label.startsWith('ה') ? '' : ` ×${x.n}`} = {x.n * x.pts}</span>
+                ))}
+              </div>
+              {p.dev && p.dev.length > 0 && (
+                <div className="win-dev">קלפי פיתוח שנשארו: {p.dev.map(d => DEV_HE[d.type]).join(', ')}</div>
+              )}
+            </div>
           ))}
-        </ul>
-        <a className="btn" href="/" style={{ textDecoration: 'none', display: 'block' }}>משחק חדש</a>
+        </div>
+        <div className="row" style={{ gap: 8, marginTop: 14 }}>
+          <button className="btn light grow" onClick={() => setHidden(true)}>צפה בלוח</button>
+          <a className="btn grow" href="/" style={{ textDecoration: 'none', textAlign: 'center' }}>משחק חדש</a>
+        </div>
       </div>
     </div>
   );

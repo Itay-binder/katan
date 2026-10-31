@@ -524,7 +524,8 @@ export function viewFor(s: GameState, you: string | null, now: number): GameView
       id: p.id, name: p.name, color: p.color, knights: p.knights,
       resCount: resTotal(p.resources), devCount: p.dev.length,
       publicVp: publicVp(s, p.id) + (s.phase === 'ended' || p.id === you ? p.dev.filter(d => d.type === 'vp').length : 0),
-      ...(p.id === you ? { resources: { ...p.resources }, dev: p.dev.map(d => ({ ...d })) } : {}),
+      // Once the game is over every hand is shown, including hidden victory point cards.
+      ...(p.id === you || s.phase === 'ended' ? { resources: { ...p.resources }, dev: p.dev.map(d => ({ ...d })) } : {}),
     })),
   };
 }
