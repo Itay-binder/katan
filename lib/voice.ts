@@ -68,7 +68,7 @@ export class VoiceRoom {
     this.st = { ...this.st, joined: true, joining: false, muted: false };
     this.members.add(this.me);
     this.failed.clear();
-    this.meter = setInterval(() => this.measure(), 250);
+    this.meter = setInterval(() => this.measure(), 150);
     this.send({ kind: 'join', from: this.me });
     this.emit();
   }
@@ -194,7 +194,7 @@ export class VoiceRoom {
     if (!this.ctx) return undefined;
     try {
       const a = this.ctx.createAnalyser();
-      a.fftSize = 512;
+      a.fftSize = 2048;
       this.ctx.createMediaStreamSource(stream).connect(a);
       return a;
     } catch { return undefined; }
