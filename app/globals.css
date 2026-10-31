@@ -374,3 +374,11 @@ button.rc { border: 3px solid transparent; }
 .dev-art { width: min(62vw, 250px); border-radius: 14px; box-shadow: 0 14px 40px rgba(0,0,0,.55); animation: flipin .45s ease-out; }
 .dev-reveal .dev-desc-line { max-width: 280px; text-align: center; font-size: 15px; font-weight: 600; opacity: .95; }
 .dev-thumb { width: 46px; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,.3); flex: none; }
+
+/* iPhone home-screen app: the status bar sits over the page, so floating layers start below it,
+   and the page colour fills the area under the home bar instead of white. */
+html { background: var(--parchment); }
+.banner { top: calc(8px + env(safe-area-inset-top)); }
+.toast { top: calc(60px + env(safe-area-inset-top)); }
+.news, .win-back { top: calc(112px + env(safe-area-inset-top)); }
+.game { bottom: 0; min-height: 100dvh; }
