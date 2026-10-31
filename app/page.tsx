@@ -1,5 +1,5 @@
 'use client';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api, parseRoomCode } from '@/lib/client';
 import InstallButton from '@/components/InstallButton';
@@ -16,6 +16,12 @@ export default function Home() {
   const [code, setCode] = useState('');
   const [codeErr, setCodeErr] = useState('');
   const input = useRef<HTMLInputElement>(null);
+  // iPhone needs an extra tap on its own "Paste" bubble, so there the field's normal paste is clearer than a button.
+  const [canQuickPaste, setCanQuickPaste] = useState(false);
+  useEffect(() => {
+    const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    setCanQuickPaste(!ios && !!navigator.clipboard?.readText);
+  }, []);
 
   function joinRoom(raw = code) {
     const id = parseRoomCode(raw);
@@ -77,7 +83,7 @@ export default function Home() {
               onPaste={e => { const t = e.clipboardData.getData('text'); if (parseRoomCode(t)) { e.preventDefault(); setCode(t); joinRoom(t); } }}
               autoCapitalize="characters" autoCorrect="off" spellCheck={false} enterKeyHint="go"
               onKeyDown={e => { if (e.key === 'Enter') joinRoom(); }} />
-            <button className="btn light small" onClick={paste} aria-label="הדבק">📋 הדבק</button>
+            {canQuickPaste && <button className="btn light small" onClick={paste} aria-label="הדבק">📋 הדבק</button>}
           </div>
           <button className="btn ok" style={{ width: '100%', marginTop: 10 }} onClick={() => joinRoom()} disabled={!code.trim()}>הצטרף</button>
           {codeErr && <p className="err" style={{ marginBottom: 0 }}>{codeErr}</p>}
