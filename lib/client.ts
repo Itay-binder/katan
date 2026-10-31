@@ -43,7 +43,7 @@ export interface ChatMsg { id: number; player_id: string; name: string; color: s
 // One realtime channel per room. The server pushes 'update' and 'chat'; players push 'emoji' and 'voice'
 // (voice call signalling) straight to each other. Components listen through `onRoomEvent`.
 const EVENTS = ['update', 'emoji', 'chat', 'voice'] as const;
-export type RoomEvent = (typeof EVENTS)[number];
+export type RoomEvent = (typeof EVENTS)[number] | 'presence';
 const channels = new Map<string, RealtimeChannel>();
 const bus = typeof window !== 'undefined' ? new EventTarget() : null;
 
@@ -60,9 +60,27 @@ export function subscribeRoom(id: string, onUpdate: () => void): () => void {
   sb ||= createClient(SB_URL!, SB_KEY!, { auth: { persistSession: false } });
   let ch = sb.channel(`katan-${id}`);
   for (const ev of EVENTS) ch = ch.on('broadcast', { event: ev }, m => bus?.dispatchEvent(new CustomEvent(ev, { detail: m.payload })));
-  ch.subscribe();
+  // Who has the game open right now (each screen announces its player id).
+  ch = ch.on('presence', { event: 'sync' }, () => {
+    const ids = Object.values(ch.presenceState()).flat().map(x => (x as { pid?: string }).pid).filter(Boolean);
+    bus?.dispatchEvent(new CustomEvent('presence', { detail: [...new Set(ids)] }));
+  });
+  ch.subscribe(status => { if (status === 'SUBSCRIBED') { joined.add(id); announce(id); } });
   channels.set(id, ch);
-  return () => { off(); channels.delete(id); sb?.removeChannel(ch); };
+  return () => { off(); channels.delete(id); joined.delete(id); sb?.removeChannel(ch); };
+}
+
+const joined = new Set<string>();
+const presenceAs = new Map<string, string>();
+function announce(id: string) {
+  const pid = presenceAs.get(id);
+  if (pid && joined.has(id)) channels.get(id)?.track({ pid }).catch(() => {});
+}
+/** Marks this screen as player `pid` being online in the room. */
+export function setPresence(id: string, pid: string | null) {
+  if (!pid) return;
+  presenceAs.set(id, pid);
+  announce(id);
 }
 
 /** Sends straight to the other players in the room (not to yourself). Nothing is stored. */

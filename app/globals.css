@@ -238,3 +238,8 @@ h1, h2, h3, .display { font-family: 'Secular One', 'Assistant', sans-serif; font
   40% { transform: translate(0, -18px) scale(1.15); opacity: 1; }
   100% { transform: translate(var(--dx), var(--dy)) scale(.55); opacity: .9; }
 }
+
+.pchip.offline { opacity: .55; }
+.pchip.offline .dot { outline: 2px dashed var(--danger); outline-offset: 2px; }
+.skipbar { display: flex; align-items: center; gap: 8px; margin: 0 8px 6px; padding: 8px 12px; border-radius: 12px; background: #fbe3c4; color: var(--ink); font-weight: 700; font-size: 14px; }
+.skipbar span { flex: 1; }

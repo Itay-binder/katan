@@ -59,6 +59,8 @@ export interface GameState {
   afterRobber: Sub;
   discards: Record<string, number>;
   stealFrom: string[];
+  /** When the player whose move it is last did something (or their turn began). */
+  lastMoveAt?: number;
   /** Last card taken by the robber this turn. Only thief and victim see `res` until the thief shows it. */
   stolen?: { by: string; from: string; res: Res | null; shown: boolean } | null;
   trade: Trade | null;
@@ -82,6 +84,7 @@ export type Action =
   | { type: 'moveRobber'; hex: number }
   | { type: 'steal'; target: string; pick?: number }
   | { type: 'showStolen' }
+  | { type: 'skipTurn' }
   | { type: 'buildRoad'; edge: number }
   | { type: 'buildSettlement'; vertex: number }
   | { type: 'buildCity'; vertex: number }

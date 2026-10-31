@@ -213,6 +213,23 @@ describe('turn flow', () => {
     expect(s.log[s.log.length - 1].text).toContain('ברזל');
   });
 
+  it('lets the others skip a player who has not moved for a minute', () => {
+    const s = setupGame(3);
+    playSetup(s);
+    const t0 = 1_000_000;
+    s.turnNo = 10; s.sub = 'main'; s.lastMoveAt = t0;
+    const [stuck, other] = s.players;
+    expect(() => applyAction(s, other.id, { type: 'skipTurn' }, t0 + 30_000)).toThrow(GameError);
+    expect(() => applyAction(s, stuck.id, { type: 'skipTurn' }, t0 + 90_000)).toThrow(GameError);
+    applyAction(s, other.id, { type: 'skipTurn' }, t0 + 61_000);
+    expect(s.current).toBe(1);
+    expect(s.sub).toBe('roll');
+    expect(s.lastMoveAt).toBe(t0 + 61_000);
+    // a move by the current player resets the clock
+    applyAction(s, other.id, { type: 'roll' }, t0 + 200_000, () => 0.1);
+    expect(s.lastMoveAt).toBe(t0 + 200_000);
+  });
+
   it('rolling a 7 forces discards then robber', () => {
     const s = setupGame(3);
     playSetup(s);

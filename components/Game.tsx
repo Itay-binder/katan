@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Board, { RES_ICON, type PickMode } from './Board';
 import { ChatPanel, useChat, useVoice } from './Social';
+import { onRoomEvent, setPresence } from '@/lib/client';
 import {
   affordable, piecesLeft, robbableOn, tradeRatios, validCities, validRoads, validSettlements,
   validSetupRoads, validSetupSettlements,
@@ -13,7 +14,7 @@ import {
 } from '@/lib/engine/types';
 
 type Act = (a: Action, quiet?: boolean) => Promise<boolean>;
-type Sheet = null | 'build' | 'trade' | 'dev' | 'log' | 'end' | 'emoji' | 'chat' | 'voice';
+type Sheet = null | 'build' | 'trade' | 'dev' | 'log' | 'end' | 'emoji' | 'chat' | 'voice' | 'skip';
 const EMOJIS = ['👍', '😂', '😡', '😱', '🔥', '🖕🏻', '🤝', '😈', '🙏', '🐑', '🧱', '😴'];
 
 const costIcons = (c: Partial<ResMap>) =>
@@ -99,6 +100,14 @@ export default function Game({ view, act, skew, react, roomId, token }: {
     pushNews([{ id: `c${m.id}`, text: `💬 ${m.name}: ${m.text}`, chat: true }]);
   });
   const voice = useVoice(roomId, me?.id ?? null);
+
+  // Who has the game open, and skipping a player who stopped moving.
+  const [online, setOnline] = useState<string[] | null>(null);
+  useEffect(() => onRoomEvent<string[]>('presence', setOnline), []);
+  useEffect(() => { setPresence(roomId, me?.id ?? null); }, [roomId, me?.id]);
+  const lastMove = view.lastMoveAt ?? view.log[view.log.length - 1]?.t;
+  const idleMs = lastMove ? now - lastMove : 0;
+  const canSkip = view.phase === 'playing' && !!me && !myTurn && idleMs >= 60_000;
   const vs = voice.state;
 
   // Big "your turn" banner each time the turn comes to you.
@@ -154,7 +163,8 @@ export default function Game({ view, act, skew, react, roomId, token }: {
       <div className="topbar">
         {view.players.map((p, i) => (
           <PlayerChip key={p.id} p={p} view={view} turn={i === view.current}
-            inCall={vs.members.includes(p.id)} talking={vs.speaking.includes(p.id)} />
+            inCall={vs.members.includes(p.id)} talking={vs.speaking.includes(p.id)}
+            offline={!!online && !online.includes(p.id)} />
         ))}
       </div>
 
@@ -164,6 +174,12 @@ export default function Game({ view, act, skew, react, roomId, token }: {
         {secsLeft !== null && view.phase === 'playing' && <span className={`timer ${secsLeft <= 10 ? 'low' : ''}`}>{secsLeft}</span>}
         <button className="btn ghost small" onClick={() => setSheet('log')} aria-label="יומן">📜</button>
       </div>
+      {canSkip && (
+        <div className="skipbar">
+          <span>{curP?.name} לא זז כבר {Math.floor(idleMs / 60_000)} דק׳{online && curP && !online.includes(curP.id) ? ' ולא מחובר' : ''}</span>
+          <button className="btn small" onClick={() => setSheet('skip')}>דלג על התור</button>
+        </div>
+      )}
 
       <div className="board-area">
         <Board view={view} mode={mode} />
@@ -237,6 +253,15 @@ export default function Game({ view, act, skew, react, roomId, token }: {
           </SheetFrame>
         );
       })()}
+      {sheet === 'skip' && canSkip && (
+        <SheetFrame title={`לדלג על התור של ${curP?.name}?`} close={() => setSheet(null)}>
+          <p style={{ marginTop: 0 }}>המשחק ישלים בשבילו את מה שנשאר בתור (באקראי) ויעביר לשחקן הבא. אם הוא חוזר, הוא ממשיך לשחק כרגיל בתור הבא שלו.</p>
+          <div className="row" style={{ gap: 8 }}>
+            <button className="btn grow" onClick={() => { setSheet(null); act({ type: 'skipTurn' }); }}>כן, דלג</button>
+            <button className="btn light grow" onClick={() => setSheet(null)}>חכה עוד</button>
+          </div>
+        </SheetFrame>
+      )}
       {sheet === 'chat' && (
         <ChatPanel roomId={roomId} token={token} meId={me?.id ?? null} messages={chat.messages} add={chat.add}
           close={() => { setSheet(null); setUnread(0); }} />
@@ -339,9 +364,9 @@ function statusText(v: GameView, me: PublicPlayer | null, myTurn: boolean, build
   }
 }
 
-function PlayerChip({ p, view, turn, inCall, talking }: { p: PublicPlayer; view: GameView; turn: boolean; inCall: boolean; talking: boolean }) {
+function PlayerChip({ p, view, turn, inCall, talking, offline }: { p: PublicPlayer; view: GameView; turn: boolean; inCall: boolean; talking: boolean; offline: boolean }) {
   return (
-    <div className={`pchip ${turn ? 'turn' : ''} ${talking ? 'talking' : ''}`}>
+    <div className={`pchip ${turn ? 'turn' : ''} ${talking ? 'talking' : ''} ${offline ? 'offline' : ''}`} title={offline ? 'לא מחובר' : ''}>
       <span className={`dot c-${p.color}`} />
       <span>{p.name}{p.id === view.you ? ' (אתה)' : ''}{inCall ? ' 🎧' : ''}</span>
       <span className="vp">{p.publicVp}</span>

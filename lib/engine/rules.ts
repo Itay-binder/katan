@@ -15,6 +15,8 @@ export const MIN_PLAYERS = 2;
 export const WIN_VP = 10;
 /** House rule: a 7 in the first rounds is rolled again; the robber only wakes up afterwards. */
 export const SAFE_ROUNDS = 3;
+/** Without a turn timer, the others may skip a player who has not moved for this long. */
+export const SKIP_AFTER_MS = 60_000;
 const LOG_KEEP = 60;
 
 const randId = (rng: Rng, n = 10) => {
@@ -104,6 +106,7 @@ function validResMap(m: unknown): m is ResMap {
 
 function setDeadline(s: GameState, now: number) {
   s.deadline = s.turnSeconds ? now + s.turnSeconds * 1000 : null;
+  s.lastMoveAt = now;
 }
 
 export function totalVp(s: GameState, pid: string) {
@@ -222,7 +225,11 @@ function requireTurn(s: GameState, pid: string, ...subs: GameState['sub'][]) {
 /** Applies an action in place. Throws GameError when illegal. */
 export function applyAction(s: GameState, pid: string, a: Action, now: number, rng: Rng = Math.random): void {
   const before = s.log[s.log.length - 1]?.id ?? 0;
-  try { reduce(s, pid, a, now, rng); } finally {
+  const mover = s.phase === 'playing' ? s.players[s.current]?.id : null;
+  try {
+    reduce(s, pid, a, now, rng);
+    if (pid === mover && a.type !== 'timeout') s.lastMoveAt = now;
+  } finally {
     // Messages a move produced carry who made it, so others can be shown what happened.
     // A timeout is played for whoever's clock ran out, not by the player who reported it.
     for (const l of s.log) if (l.id > before && l.by === undefined) l.by = a.type === 'timeout' ? null : pid;
@@ -482,6 +489,14 @@ function reduce(s: GameState, pid: string, a: Action, now: number, rng: Rng): vo
     case 'endTurn': {
       requireTurn(s, pid, 'main', 'roadBuilding');
       startTurn(s, (s.current + 1) % s.players.length, now);
+      return;
+    }
+    case 'skipTurn': {
+      if (s.phase !== 'playing') throw new GameError('המשחק לא פעיל');
+      if (cur(s).id === pid) throw new GameError('זה התור שלך');
+      if (now - (s.lastMoveAt ?? s.log[s.log.length - 1]?.t ?? 0) < SKIP_AFTER_MS) throw new GameError('אפשר לדלג רק אחרי דקה בלי תזוזה');
+      log(s, `${player(s, pid).name} דילג על התור של ${cur(s).name}`);
+      resolveTimeout(s, now, rng);
       return;
     }
     case 'timeout': {
