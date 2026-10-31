@@ -12,13 +12,14 @@ import {
 } from '@/lib/engine/types';
 
 type Act = (a: Action, quiet?: boolean) => Promise<boolean>;
-type Sheet = null | 'build' | 'trade' | 'dev' | 'log';
+type Sheet = null | 'build' | 'trade' | 'dev' | 'log' | 'end' | 'emoji';
+const EMOJIS = ['👍', '😂', '😡', '😱', '🔥', '👏', '🤝', '😈', '🙏', '🐑', '🧱', '😴'];
 
 const costIcons = (c: Partial<ResMap>) =>
   RES.filter(k => c[k]).map(k => `${RES_ICON[k]}${c[k]! > 1 ? '×' + c[k] : ''}`).join(' ');
 const resLine = (r: ResMap) => RES.filter(k => r[k]).map(k => `${r[k]} ${RES_ICON[k]}`).join('  ');
 
-export default function Game({ view, act, skew }: { view: GameView; act: Act; skew: number }) {
+export default function Game({ view, act, skew, react }: { view: GameView; act: Act; skew: number; react: (e: string) => void }) {
   const me = view.players.find(p => p.id === view.you) ?? null;
   const curP = view.players[view.current];
   const myTurn = view.phase === 'playing' && !!me && curP?.id === me.id;
@@ -76,6 +77,7 @@ export default function Game({ view, act, skew }: { view: GameView; act: Act; sk
         {view.dice && <div className="dice"><span className="die">{view.dice[0]}</span><span className="die">{view.dice[1]}</span></div>}
         <span className="msg">{statusText(view, me, myTurn, build)}</span>
         {secsLeft !== null && view.phase === 'playing' && <span className={`timer ${secsLeft <= 10 ? 'low' : ''}`}>{secsLeft}</span>}
+        {me && <button className="btn ghost small" onClick={() => setSheet('emoji')} aria-label="אימוג'י">😀</button>}
         <button className="btn ghost small" onClick={() => setSheet('log')} aria-label="יומן">📜</button>
       </div>
 
@@ -99,7 +101,7 @@ export default function Game({ view, act, skew }: { view: GameView; act: Act; sk
               <span className="i">🃏</span>פיתוח{me.dev?.length ? ` (${me.dev.length})` : ''}
             </button>
             <button className="btn light" disabled={!(myTurn && (view.sub === 'main' || view.sub === 'roadBuilding'))}
-              onClick={() => act({ type: 'endTurn' })}>
+              onClick={() => setSheet('end')}>
               <span className="i">⏭</span>סיים
             </button>
           </div>
@@ -113,6 +115,21 @@ export default function Game({ view, act, skew }: { view: GameView; act: Act; sk
       {sheet === 'trade' && me && <TradeSheet view={view} meId={me.id} act={act} close={() => setSheet(null)} />}
       {sheet === 'dev' && me && <DevSheet view={view} meId={me.id} myTurn={myTurn} act={act} close={() => setSheet(null)} />}
       {sheet === 'log' && <LogSheet view={view} close={() => setSheet(null)} />}
+      {sheet === 'end' && myTurn && (
+        <SheetFrame title="בטוח שאתה רוצה לסיים את התור?" close={() => setSheet(null)}>
+          <div className="row" style={{ gap: 8 }}>
+            <button className="btn grow" onClick={() => { setSheet(null); act({ type: 'endTurn' }); }}>כן, סיים תור</button>
+            <button className="btn light grow" onClick={() => setSheet(null)}>עוד לא</button>
+          </div>
+        </SheetFrame>
+      )}
+      {sheet === 'emoji' && (
+        <SheetFrame title="שלח לכולם" close={() => setSheet(null)}>
+          <div className="emojis">
+            {EMOJIS.map(e => <button key={e} onClick={() => { react(e); setSheet(null); }}>{e}</button>)}
+          </div>
+        </SheetFrame>
+      )}
 
       {myDiscard > 0 && view.sub === 'discard' && me && <DiscardSheet need={myDiscard} hand={me.resources!} act={act} />}
       {myTurn && view.sub === 'steal' && <StealSheet view={view} act={act} />}
@@ -262,6 +279,8 @@ function TradeSheet({ view, meId, act, close }: { view: GameView; meId: string; 
 
   return (
     <SheetFrame title="מסחר" close={close}>
+      <p className="field-label">הקלפים שלך</p>
+      <Hand r={hand} />
       <div className="tabs">
         <button className={tab === 'players' ? 'on' : ''} onClick={() => setTab('players')}>עם שחקנים</button>
         <button className={tab === 'bank' ? 'on' : ''} onClick={() => setTab('bank')}>עם הבנק</button>

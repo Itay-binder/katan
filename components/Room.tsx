@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { api, getToken, hasRealtime, setToken, subscribeRoom } from '@/lib/client';
+import { api, getToken, hasRealtime, sendEmoji, setToken, subscribeRoom, type EmojiMsg } from '@/lib/client';
 import type { Action, GameView } from '@/lib/engine/types';
 import Lobby from './Lobby';
 import Game from './Game';
@@ -12,6 +12,13 @@ export default function Room({ id }: { id: string }) {
   const token = useRef<string | null>(null);
   const skew = useRef(0); // server clock minus local clock
   const lastVersion = useRef(-1);
+  const [floats, setFloats] = useState<(EmojiMsg & { key: number; x: number })[]>([]);
+
+  const showEmoji = useCallback((m: EmojiMsg) => {
+    const f = { ...m, key: Math.random(), x: 10 + Math.random() * 70 };
+    setFloats(fs => [...fs.slice(-12), f]);
+    setTimeout(() => setFloats(fs => fs.filter(o => o.key !== f.key)), 2600);
+  }, []);
 
   const accept = useCallback((v: GameView) => {
     skew.current = v.now - Date.now();
@@ -32,7 +39,7 @@ export default function Room({ id }: { id: string }) {
   useEffect(() => {
     token.current = getToken(id);
     load();
-    const unsub = subscribeRoom(id, load);
+    const unsub = subscribeRoom(id, load, showEmoji);
     // Fallback refresh: realtime normally does the work, so this is slow and only while the tab is visible.
     const every = hasRealtime ? 60_000 : 2_000;
     const iv = setInterval(() => { if (document.visibilityState === 'visible') load(); }, every);
@@ -40,7 +47,7 @@ export default function Room({ id }: { id: string }) {
     document.addEventListener('visibilitychange', onVis);
     window.addEventListener('focus', onVis);
     return () => { unsub(); clearInterval(iv); document.removeEventListener('visibilitychange', onVis); window.removeEventListener('focus', onVis); };
-  }, [id, load]);
+  }, [id, load, showEmoji]);
 
   const flash = (m: string) => { setToast(m); setTimeout(() => setToast(''), 2800); };
 
@@ -76,7 +83,20 @@ export default function Room({ id }: { id: string }) {
     <>
       {view.phase === 'lobby'
         ? <Lobby view={view} act={act} join={join} />
-        : <Game view={view} act={act} skew={skew.current} />}
+        : <Game view={view} act={act} skew={skew.current}
+            react={e => {
+              const me = view.players.find(p => p.id === view.you);
+              if (!me) return;
+              const m = { e, name: me.name, color: me.color };
+              showEmoji(m);
+              sendEmoji(id, m);
+            }} />}
+      {floats.map(f => (
+        <div key={f.key} className="floater" style={{ left: `${f.x}%` }}>
+          <span className="fe">{f.e}</span>
+          <span className={`fn c-${f.color}`}>{f.name}</span>
+        </div>
+      ))}
       {toast && <div className="toast" role="alert">{toast}</div>}
     </>
   );

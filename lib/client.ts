@@ -1,5 +1,5 @@
 'use client';
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { createClient, type RealtimeChannel, type SupabaseClient } from '@supabase/supabase-js';
 import type { Action, GameView } from './engine/types';
 
 const tokenKey = (id: string) => `katan:${id}`;
@@ -37,10 +37,22 @@ const SB_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SB_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 export const hasRealtime = !!(SB_URL && SB_KEY);
 
-/** Calls onUpdate whenever the server says the room changed. Returns an unsubscribe function. */
-export function subscribeRoom(id: string, onUpdate: () => void): () => void {
+export interface EmojiMsg { e: string; name: string; color: string }
+const channels = new Map<string, RealtimeChannel>();
+
+/** Calls onUpdate whenever the server says the room changed, onEmoji when a player sends a reaction. Returns an unsubscribe function. */
+export function subscribeRoom(id: string, onUpdate: () => void, onEmoji?: (m: EmojiMsg) => void): () => void {
   if (!hasRealtime) return () => {};
   sb ||= createClient(SB_URL!, SB_KEY!, { auth: { persistSession: false } });
-  const ch = sb.channel(`katan-${id}`).on('broadcast', { event: 'update' }, onUpdate).subscribe();
-  return () => { sb?.removeChannel(ch); };
+  const ch = sb.channel(`katan-${id}`)
+    .on('broadcast', { event: 'update' }, onUpdate)
+    .on('broadcast', { event: 'emoji' }, m => onEmoji?.(m.payload as EmojiMsg))
+    .subscribe();
+  channels.set(id, ch);
+  return () => { channels.delete(id); sb?.removeChannel(ch); };
+}
+
+/** Reactions go player to player over the realtime channel only; they never touch the database. */
+export function sendEmoji(id: string, m: EmojiMsg) {
+  channels.get(id)?.send({ type: 'broadcast', event: 'emoji', payload: m });
 }
