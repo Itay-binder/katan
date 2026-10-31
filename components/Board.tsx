@@ -149,9 +149,8 @@ export default function Board({ view, mode }: { view: GameView; mode: PickMode }
               <polygon points={pts(h.vertices)} fill={TERRAIN_FILL[hx.terrain]} />
               <image href={`/tiles/${hx.terrain}.webp`} x={cx - TILE_W / 2} y={cy - S} width={TILE_W} height={2 * S}
                 preserveAspectRatio="xMidYMid slice" clipPath={`url(#hc${h.id})`} />
-              {/* border between tiles: light sand band with a dark gold line inside it */}
+              {/* border between tiles: a light sand band */}
               <polygon points={pts(h.vertices)} fill="none" stroke="#f6e7bf" strokeWidth={8.5} strokeLinejoin="round" />
-              <polygon points={pts(h.vertices)} fill="none" stroke="#9c7420" strokeWidth={2.2} strokeLinejoin="round" />
               {hx.number && (
                 <g filter="url(#sh)">
                   <circle cx={cx} cy={cy + 6} r={17} fill="#fbf4e2" stroke="#c9a347" strokeWidth={1.5} />
