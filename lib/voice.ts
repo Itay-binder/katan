@@ -19,7 +19,7 @@ export interface VoiceState {
 }
 
 const ICE: RTCIceServer[] = [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }];
-const SPEAK_LEVEL = 0.04;
+const SPEAK_LEVEL = 0.02;
 
 interface Peer { pc: RTCPeerConnection; audio: HTMLAudioElement; analyser?: AnalyserNode; pending: RTCIceCandidateInit[] }
 
@@ -52,17 +52,18 @@ export class VoiceRoom {
   async join() {
     if (this.st.joined || this.st.joining) return;
     this.st = { ...this.st, joining: true, error: '' }; this.emit();
+    // Created right inside the tap: phones keep an AudioContext made later (after the mic prompt) paused.
+    try { this.ctx = new AudioContext(); this.ctx.resume().catch(() => {}); } catch { this.ctx = null; }
     try {
       this.local = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
     } catch {
+      this.ctx?.close().catch(() => {}); this.ctx = null;
       this.st = { ...this.st, joining: false, error: 'אין גישה למיקרופון. צריך לאשר מיקרופון בדפדפן.' }; this.emit();
+      setTimeout(() => { this.st = { ...this.st, error: '' }; this.emit(); }, 4000);
       return;
     }
-    try {
-      this.ctx = new AudioContext();
-      await this.ctx.resume();
-      this.localAnalyser = this.analyse(this.local);
-    } catch { /* speaking meter is optional */ }
+    this.ctx?.resume().catch(() => {});
+    this.localAnalyser = this.analyse(this.local);
     this.st = { ...this.st, joined: true, joining: false, muted: false };
     this.members.add(this.me);
     this.failed.clear();
