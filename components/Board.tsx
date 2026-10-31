@@ -166,6 +166,9 @@ export default function Board({ view, mode }: { view: GameView; mode: PickMode }
           );
         })}
 
+        {/* the tile under the robber is dimmed so the blocked tile is obvious */}
+        <polygon points={pts(HEXES[view.robber].vertices)} fill="rgba(15,10,30,.38)" pointerEvents="none" />
+
         {/* roads */}
         {Object.entries(view.roads).map(([eid, owner]) => {
           const e = EDGES[+eid], a = VERTICES[e.a], b = VERTICES[e.b];
@@ -194,14 +197,15 @@ export default function Board({ view, mode }: { view: GameView; mode: PickMode }
         {/* robber */}
         {(() => {
           const h = HEXES[view.robber];
-          const x = h.x * S + 27, y = h.y * S + 2;
+          const x = h.x * S + 24, y = h.y * S + 8;
           const dropping = drop?.hex === view.robber;
           return (
             <g key={dropping ? drop!.key : 'still'} className={dropping ? 'robber-drop' : ''}>
               {/* soft cast shadow, then the knight figure (cut-out painting) standing on the tile */}
-              <ellipse cx={x + 5} cy={y + 18} rx={15} ry={4.5} fill="#000" opacity={.5} filter="url(#rbShadow)" />
-              <image href="/robber.webp" x={x - 17} y={y + 19 - 55} width={34} height={55} preserveAspectRatio="xMidYMax meet"
-                style={{ filter: 'drop-shadow(0 1px 1.5px rgba(0,0,0,.6))' }} />
+              <ellipse cx={x + 6} cy={y + 30} rx={22} ry={6.5} fill="#000" opacity={.55} filter="url(#rbShadow)" />
+              {/* a warm glow around the figure keeps it readable on dark and red tiles */}
+              <image href="/robber.webp" x={x - 26} y={y + 32 - 84} width={52} height={84} preserveAspectRatio="xMidYMax meet"
+                style={{ filter: 'drop-shadow(0 0 1.2px #fff6dc) drop-shadow(0 0 3px rgba(255,236,180,.85)) drop-shadow(0 2px 3px rgba(0,0,0,.6))' }} />
             </g>
           );
         })()}
@@ -209,7 +213,7 @@ export default function Board({ view, mode }: { view: GameView; mode: PickMode }
         {drop && (
           <g key={`hit${drop.key}`} pointerEvents="none">
             <polygon points={pts(HEXES[drop.hex].vertices)} className={drop.mine ? 'robber-hit mine' : 'robber-hit'} />
-            <circle cx={HEXES[drop.hex].x * S + 27} cy={HEXES[drop.hex].y * S + 19} r={14} className="robber-dust" />
+            <circle cx={HEXES[drop.hex].x * S + 30} cy={HEXES[drop.hex].y * S + 38} r={18} className="robber-dust" />
           </g>
         )}
 
