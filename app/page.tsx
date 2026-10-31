@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api, parseRoomCode } from '@/lib/client';
 import InstallButton from '@/components/InstallButton';
@@ -15,6 +15,7 @@ export default function Home() {
   const [err, setErr] = useState('');
   const [code, setCode] = useState('');
   const [codeErr, setCodeErr] = useState('');
+  const input = useRef<HTMLInputElement>(null);
 
   function joinRoom(raw = code) {
     const id = parseRoomCode(raw);
@@ -23,12 +24,18 @@ export default function Home() {
     router.push(`/r/${id}`);
   }
   async function paste() {
+    // iPhone shows a small "Paste" bubble that must be tapped; if it is missed or refused,
+    // fall back to the field itself, where a normal paste also joins straight away.
     try {
       const t = await navigator.clipboard.readText();
+      if (!t) throw new Error('empty');
       setCode(t);
       if (parseRoomCode(t)) joinRoom(t);
       else setCodeErr('בלוח יש משהו שהוא לא קוד חדר.');
-    } catch { setCodeErr('הדפדפן לא אפשר להדביק. לחץ לחיצה ארוכה בשדה ובחר "הדבק".'); }
+    } catch {
+      input.current?.focus();
+      setCodeErr('לא הצלחתי לקרוא מהלוח. לחץ לחיצה ארוכה בשדה ובחר "הדבק", ותיכנס לחדר אוטומטית.');
+    }
   }
 
   async function create() {
@@ -65,7 +72,9 @@ export default function Home() {
         <div className="card join-card">
           <p className="field-label">הצטרף לחדר קיים</p>
           <div className="join-row">
-            <input value={code} onChange={e => { setCode(e.target.value); setCodeErr(''); }} placeholder="קוד חדר או לינק"
+            <input ref={input} value={code} placeholder="קוד חדר או לינק"
+              onChange={e => { setCode(e.target.value); setCodeErr(''); }}
+              onPaste={e => { const t = e.clipboardData.getData('text'); if (parseRoomCode(t)) { e.preventDefault(); setCode(t); joinRoom(t); } }}
               autoCapitalize="characters" autoCorrect="off" spellCheck={false} enterKeyHint="go"
               onKeyDown={e => { if (e.key === 'Enter') joinRoom(); }} />
             <button className="btn light small" onClick={paste} aria-label="הדבק">📋 הדבק</button>
