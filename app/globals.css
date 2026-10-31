@@ -366,3 +366,11 @@ button.rc { border: 3px solid transparent; }
 .dev-card .dev-name { font-family: 'Secular One', sans-serif; font-size: 28px; }
 .dev-card .dev-desc { font-size: 14px; color: var(--ink-soft); line-height: 1.35; }
 .dev-knight { border-color: #b23a3a; } .dev-vp { border-color: #2f6fd6; } .dev-monopoly { border-color: #2e9e5b; }
+
+/* room code */
+.code-box { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; padding: 10px 14px; border-radius: 12px; border: 2px dashed #c9a347; background: #fff8e4; font: inherit; color: var(--ink); cursor: pointer; }
+.code-box .code { font-family: 'Secular One', monospace; font-size: 28px; letter-spacing: 3px; direction: ltr; }
+.code-box .code-copy { font-weight: 800; font-size: 15px; color: var(--ink-soft); white-space: nowrap; }
+.join-card { margin-top: 12px; }
+.join-row { display: flex; gap: 8px; }
+.join-row input { flex: 1; min-width: 0; font: inherit; font-size: 18px; padding: 10px 12px; border-radius: 12px; border: 2px solid #d8c9a3; background: #fff; direction: ltr; text-align: center; letter-spacing: 1px; }

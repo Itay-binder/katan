@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { COLORS, type Action, type Color, type GameView } from '@/lib/engine/types';
 import { MAX_PLAYERS, MIN_PLAYERS } from '@/lib/engine/rules';
+import { showCode } from '@/lib/client';
 
 const COLOR_HE: Record<Color, string> = { red: 'אדום', blue: 'כחול', orange: 'כתום', green: 'ירוק' };
 
@@ -14,6 +15,7 @@ export default function Lobby({ view, act, join }: {
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [codeCopied, setCodeCopied] = useState(false);
   const [link, setLink] = useState('');
   useEffect(() => { setLink(window.location.href); }, []);
 
@@ -29,7 +31,10 @@ export default function Lobby({ view, act, join }: {
   async function copy() {
     try { await navigator.clipboard.writeText(link); setCopied(true); setTimeout(() => setCopied(false), 1500); } catch { /* ignore */ }
   }
-  const wa = `https://wa.me/?text=${encodeURIComponent(`בוא לשחק איתי Katan 🎲\n${link}`)}`;
+  async function copyCode() {
+    try { await navigator.clipboard.writeText(view.id.toUpperCase()); setCodeCopied(true); setTimeout(() => setCodeCopied(false), 1500); } catch { /* ignore */ }
+  }
+  const wa = `https://wa.me/?text=${encodeURIComponent(`בוא לשחק איתי Katan 🎲\n${link}\nקוד חדר: ${view.id.toUpperCase()}`)}`;
 
   return (
     <main className="lobby">
@@ -42,6 +47,11 @@ export default function Lobby({ view, act, join }: {
           <button className="btn light small grow" onClick={copy}>{copied ? 'הועתק ✓' : 'העתק'}</button>
           <a className="btn ok small grow" style={{ textAlign: 'center', textDecoration: 'none' }} href={wa} target="_blank" rel="noreferrer">שלח בווצאפ</a>
         </div>
+        <p className="field-label" style={{ marginTop: 14 }}>או קוד חדר (מכניסים בדף הבית)</p>
+        <button className="code-box" onClick={copyCode} aria-label="העתק קוד חדר">
+          <span className="code">{showCode(view.id)}</span>
+          <span className="code-copy">{codeCopied ? 'הועתק ✓' : '📋 העתק'}</span>
+        </button>
         <p style={{ margin: '10px 0 0', color: 'var(--ink-soft)', fontSize: 14 }}>
           טיימר לתור: {view.turnSeconds ? `${view.turnSeconds} שניות` : 'בלי טיימר'}
         </p>

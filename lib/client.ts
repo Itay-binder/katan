@@ -22,6 +22,16 @@ async function call<T>(url: string, init: RequestInit & { token?: string | null 
   return data as T;
 }
 
+/** Room code from whatever was pasted: the code itself (any case, with spaces) or a full room link. */
+export function parseRoomCode(input: string): string | null {
+  const t = input.trim().toLowerCase();
+  const fromLink = t.match(/\/r\/([a-z0-9]+)/);
+  const code = (fromLink ? fromLink[1] : t).replace(/[\s-]/g, '');
+  return /^[a-z0-9]{8}$/.test(code) ? code : null;
+}
+/** How a code is shown to people: upper case, split in two for easy reading. */
+export const showCode = (id: string) => `${id.slice(0, 4)} ${id.slice(4)}`.toUpperCase();
+
 export const api = {
   create: (turnSeconds: number | null) =>
     call<{ id: string }>('/api/rooms', { method: 'POST', body: JSON.stringify({ turnSeconds }) }),

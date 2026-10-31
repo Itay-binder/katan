@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { api } from '@/lib/client';
+import { api, parseRoomCode } from '@/lib/client';
 import InstallButton from '@/components/InstallButton';
 
 const TIMERS: { v: number | null; label: string }[] = [
@@ -13,6 +13,23 @@ export default function Home() {
   const [timer, setTimer] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+  const [code, setCode] = useState('');
+  const [codeErr, setCodeErr] = useState('');
+
+  function joinRoom(raw = code) {
+    const id = parseRoomCode(raw);
+    if (!id) { setCodeErr('זה לא נראה כמו קוד חדר. הקוד הוא 8 תווים, או הלינק המלא.'); return; }
+    setCodeErr('');
+    router.push(`/r/${id}`);
+  }
+  async function paste() {
+    try {
+      const t = await navigator.clipboard.readText();
+      setCode(t);
+      if (parseRoomCode(t)) joinRoom(t);
+      else setCodeErr('בלוח יש משהו שהוא לא קוד חדר.');
+    } catch { setCodeErr('הדפדפן לא אפשר להדביק. לחץ לחיצה ארוכה בשדה ובחר "הדבק".'); }
+  }
 
   async function create() {
     setBusy(true); setErr('');
@@ -44,6 +61,17 @@ export default function Home() {
           <p style={{ margin: 0, color: 'var(--ink-soft)', fontSize: 15 }}>
             נפתח חדר עם לינק משלו. שולחים אותו לעד 3 חברים, כל אחד בוחר צבע, ומתחילים.
           </p>
+        </div>
+        <div className="card join-card">
+          <p className="field-label">הצטרף לחדר קיים</p>
+          <div className="join-row">
+            <input value={code} onChange={e => { setCode(e.target.value); setCodeErr(''); }} placeholder="קוד חדר או לינק"
+              autoCapitalize="characters" autoCorrect="off" spellCheck={false} enterKeyHint="go"
+              onKeyDown={e => { if (e.key === 'Enter') joinRoom(); }} />
+            <button className="btn light small" onClick={paste} aria-label="הדבק">📋 הדבק</button>
+          </div>
+          <button className="btn ok" style={{ width: '100%', marginTop: 10 }} onClick={() => joinRoom()} disabled={!code.trim()}>הצטרף</button>
+          {codeErr && <p className="err" style={{ marginBottom: 0 }}>{codeErr}</p>}
         </div>
         <InstallButton />
       </div>
