@@ -325,7 +325,7 @@ export default function Game({ view, act, skew, react, roomId, token }: {
         </div>
       )}
 
-      {view.trade && view.phase === 'playing' && me && <TradeBanner view={view} meId={me.id} act={act} />}
+      {view.trade && view.phase === 'playing' && me && <TradeBanner key={JSON.stringify([view.trade.from, view.trade.give, view.trade.get])} view={view} meId={me.id} act={act} />}
 
       {sheet === 'build' && me && <BuildSheet view={view} meId={me.id} close={() => setSheet(null)}
         pick={b => { setBuild(b); setSheet(null); }} buyDev={() => act({ type: 'buyDev' }).then(ok => ok && setSheet(null))} />}
@@ -691,8 +691,12 @@ function TradeBanner({ view, meId, act }: { view: GameView; meId: string; act: A
   const from = view.players.find(p => p.id === t.from)!;
   const mine = t.from === meId;
   const myResp = t.responses[meId];
+  // Once you have answered you may close the offer; it comes back only with a new offer.
+  const [hidden, setHidden] = useState(false);
+  if (hidden) return null;
   return (
     <div className="banner">
+      {!mine && myResp && <button className="banner-x" onClick={() => setHidden(true)} aria-label="סגור">✕</button>}
       <div style={{ fontWeight: 800, marginBottom: 6 }}>
         {mine ? 'ההצעה שלך' : `${from.name} מציע עסקה`}
       </div>
