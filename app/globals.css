@@ -279,3 +279,27 @@ h1, h2, h3, .display { font-family: 'Secular One', 'Assistant', sans-serif; font
 }
 
 .statusbar .clock { font-family: 'Secular One', sans-serif; font-size: 14px; opacity: .8; white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+/* ---- resource cards (illustrated) ---- */
+.r-brick { background: #b9532a url(/cards/brick-sm.webp) center / cover no-repeat; }
+.r-lumber { background: #2f7a3b url(/cards/lumber-sm.webp) center / cover no-repeat; }
+.r-wool { background: #7dbb4a url(/cards/wool-sm.webp) center / cover no-repeat; }
+.r-grain { background: #d9a92b url(/cards/grain-sm.webp) center / cover no-repeat; }
+.r-ore { background: #6f7580 url(/cards/ore-sm.webp) center / cover no-repeat; }
+.rc { aspect-ratio: 911 / 1397; width: 100%; max-width: 58px; justify-self: center; margin: 0 auto; padding: 0; border-radius: 7px; box-shadow: 0 2px 5px rgba(0,0,0,.3); }
+.rc .ico { display: none; }
+.rc .n { position: absolute; bottom: -7px; left: 50%; transform: translateX(-50%); min-width: 24px; height: 24px; padding: 0 6px; border-radius: 99px; background: var(--ink); color: #fff; font-size: 15px; line-height: 24px; text-shadow: none; box-shadow: 0 1px 3px rgba(0,0,0,.35); }
+.rc .n:empty { display: none; }
+.rc.zero { opacity: 1; filter: grayscale(.85) brightness(1.05); }
+.rc.zero .n { background: #9a8f78; }
+.hand { row-gap: 12px; margin-bottom: 14px; }
+.stepper .cell .rc { margin-bottom: 12px; max-width: 50px; }
+button.rc { border: 3px solid transparent; }
+.flycard, .robbed-card { font-size: 0; }
+.flycard { width: 40px; height: 61px; margin: -30px 0 0 -20px; border-width: 2px; }
+.robbed-card { width: 56px; height: 86px; margin: -43px 0 0 -28px; }
+.big-card { width: 150px; height: 230px; border-width: 4px; font-size: 0; }
+.big-card .ico { display: none; }
+.big-card.r-brick { background-image: url(/cards/brick.webp); } .big-card.r-lumber { background-image: url(/cards/lumber.webp); }
+.big-card.r-wool { background-image: url(/cards/wool.webp); } .big-card.r-grain { background-image: url(/cards/grain.webp); }
+.big-card.r-ore { background-image: url(/cards/ore.webp); }

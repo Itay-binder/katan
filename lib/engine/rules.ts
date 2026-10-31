@@ -87,7 +87,7 @@ const player = (s: GameState, id: string) => {
 const cur = (s: GameState) => s.players[s.current];
 const fmt = (r: Partial<ResMap>) =>
   RES.filter(k => r[k]).map(k => `${r[k]} ${RES_HE[k]}`).join(', ');
-/** "חיטה 8" style name of a tile, for messages. */
+/** "חציר 8" style name of a tile, for messages. */
 const hexName = (s: GameState, h: number) => {
   const x = s.hexes[h];
   return x.terrain === 'desert' ? 'המדבר' : `${RES_HE[x.terrain]} ${x.number}`;

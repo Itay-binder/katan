@@ -211,7 +211,7 @@ describe('turn flow', () => {
     expect(viewFor(s, other.id, 0).stolen!.res).toBeNull();
     applyAction(s, me.id, { type: 'showStolen' }, 0);
     expect(viewFor(s, other.id, 0).stolen!.res).toBe('ore');
-    expect(s.log[s.log.length - 1].text).toContain('ברזל');
+    expect(s.log[s.log.length - 1].text).toContain('אבן');
   });
 
   it('only a player who has been out of the game for a minute can be skipped', () => {

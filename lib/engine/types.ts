@@ -133,7 +133,7 @@ export const COST: Record<'road' | 'settlement' | 'city' | 'dev', Partial<ResMap
 export const PIECES = { road: 15, settlement: 5, city: 4 };
 
 export const RES_HE: Record<Res, string> = {
-  brick: 'לבנים', lumber: 'עצים', wool: 'צמר', grain: 'חיטה', ore: 'ברזל',
+  brick: 'טיט', lumber: 'עץ', wool: 'כבשה', grain: 'חציר', ore: 'אבן',
 };
 
 export const DEV_HE: Record<DevType, string> = {
