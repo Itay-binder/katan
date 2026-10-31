@@ -486,17 +486,13 @@ const DEV_DESC: Record<DevType, string> = {
   monopoly: 'בוחרים משאב, וכל השחקנים נותנים לך את כל מה שיש להם ממנו.',
   vp: 'נקודה נסתרת. נספרת אוטומטית.',
 };
-const DEV_ICON: Record<DevType, string> = { knight: '⚔️', roadBuilding: '🛤️', yearOfPlenty: '🎁', monopoly: '💰', vp: '🏆' };
 
 /** The development card you just bought, shown big for a moment. */
 function DevReveal({ type, ready }: { type: DevType; ready: boolean }) {
   return (
     <div className="steal-reveal dev-reveal">
-      <div className={`dev-card dev-${type}`}>
-        <div className="dev-ico">{DEV_ICON[type]}</div>
-        <div className="dev-name">{DEV_HE[type]}</div>
-        <div className="dev-desc">{DEV_DESC[type]}</div>
-      </div>
+      <img className="dev-art" src={`/cards/dev-${type}.webp`} alt={DEV_HE[type]} />
+      <p className="dev-desc-line">{DEV_DESC[type]}</p>
       <p>קנית {DEV_HE[type]}{type === 'vp' ? '' : ready ? ' · אפשר לשחק כבר עכשיו' : ' · אפשר לשחק מהתור הבא'}</p>
     </div>
   );
@@ -775,6 +771,7 @@ function DevSheet({ view, meId, myTurn, act, close }: { view: GameView; meId: st
           const fresh = cards.filter(c => c.type === t && !devReady(c, view.turnNo)).length;
           return (
             <div className="opt" key={t}>
+              <img className="dev-thumb" src={`/cards/dev-${t}-sm.webp`} alt="" />
               <div className="grow">
                 <div style={{ fontWeight: 800, fontSize: 18 }}>{DEV_HE[t]} ×{n}</div>
                 <div className="cost">{DESC[t]}{fresh && t !== 'vp' ? ` (${fresh} נקנו עכשיו, אפשר לשחק מהתור הבא)` : ''}</div>

@@ -374,3 +374,8 @@ button.rc { border: 3px solid transparent; }
 .join-card { margin-top: 12px; }
 .join-row { display: flex; gap: 8px; }
 .join-row input { flex: 1; min-width: 0; font: inherit; font-size: 18px; padding: 10px 12px; border-radius: 12px; border: 2px solid #d8c9a3; background: #fff; direction: ltr; text-align: center; letter-spacing: 1px; }
+
+/* illustrated development cards */
+.dev-art { width: min(62vw, 250px); border-radius: 14px; box-shadow: 0 14px 40px rgba(0,0,0,.55); animation: flipin .45s ease-out; }
+.dev-reveal .dev-desc-line { max-width: 280px; text-align: center; font-size: 15px; font-weight: 600; opacity: .95; }
+.dev-thumb { width: 46px; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,.3); flex: none; }
