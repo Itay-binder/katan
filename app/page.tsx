@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/client';
+import InstallButton from '@/components/InstallButton';
 
 const TIMERS: { v: number | null; label: string }[] = [
   { v: null, label: 'בלי' }, { v: 60, label: '60 שנ׳' }, { v: 90, label: '90 שנ׳' }, { v: 120, label: '120 שנ׳' },
@@ -44,6 +45,7 @@ export default function Home() {
             נפתח חדר עם לינק משלו. שולחים אותו לעד 3 חברים, כל אחד בוחר צבע, ומתחילים.
           </p>
         </div>
+        <InstallButton />
       </div>
     </main>
   );
