@@ -31,6 +31,7 @@ export class VoiceRoom {
   private members = new Set<string>();
   private failed = new Set<string>();
   private speaking: string[] = [];
+  private loud = new Map<string, number>();
   private meter: ReturnType<typeof setInterval> | null = null;
   private off: () => void;
   private st: Omit<VoiceState, 'members' | 'speaking' | 'failed'> = { joined: false, joining: false, muted: false, error: '' };
@@ -208,9 +209,11 @@ export class VoiceRoom {
       for (const v of buf) sum += v * v;
       return Math.sqrt(sum / buf.length);
     };
-    const now: string[] = [];
-    if (!this.st.muted && level(this.localAnalyser) > SPEAK_LEVEL) now.push(this.me);
-    for (const [id, p] of this.peers) if (level(p.analyser) > SPEAK_LEVEL) now.push(id);
+    // A short hold after each loud moment keeps the indicator from flickering between words.
+    const t = Date.now();
+    if (!this.st.muted && level(this.localAnalyser) > SPEAK_LEVEL) this.loud.set(this.me, t);
+    for (const [id, p] of this.peers) if (level(p.analyser) > SPEAK_LEVEL) this.loud.set(id, t);
+    const now = [...this.loud].filter(([id, at]) => t - at < 700 && (id === this.me || this.peers.has(id))).map(([id]) => id).sort();
     if (now.join() !== this.speaking.join()) { this.speaking = now; this.emit(); }
   }
 }
