@@ -42,6 +42,7 @@ export default function Game({ view, act, skew, react, roomId, token }: {
   const [build, setBuild] = useState<null | 'road' | 'settlement' | 'city'>(null);
   const [sheet, setSheet] = useState<Sheet>(null);
   const [robberAt, setRobberAt] = useState<number | null>(null);
+  const [menu, setMenu] = useState(false);
   const [reveal, setReveal] = useState(false);
   useEffect(() => {
     if (!reveal) return;
@@ -244,6 +245,36 @@ export default function Game({ view, act, skew, react, roomId, token }: {
         <span className="msg">{statusText(view, me, myTurn, build)}</span>
         {secsLeft !== null && view.phase === 'playing' && <span className={`timer ${secsLeft <= 10 ? 'low' : ''}`}>{secsLeft}</span>}
         <span className="clock" title="זמן משחק">⏱ {gameClock(view, now)}</span>
+        {me && vs.joined && (
+          <button className={`btn ghost small mic ${vs.muted ? 'muted' : ''}`} onClick={() => setSheet('voice')} aria-label="שיחה">
+            {vs.muted ? '🔇' : '🎙️'}
+          </button>
+        )}
+        {me && (
+          <div className="menu-wrap">
+            <button className="btn ghost small" onClick={() => setMenu(m => !m)} aria-label="תפריט" aria-expanded={menu}>
+              ☰{(unread > 0 || (!vs.joined && vs.members.length > 0)) && <span className="menu-dot" />}
+            </button>
+            {menu && (
+              <>
+                <div className="menu-back" onClick={() => setMenu(false)} />
+                <div className="menu-pop" onClick={() => setMenu(false)}>
+                  <button onClick={() => (vs.joined ? setSheet('voice') : voice.join())}>
+                    <span>{vs.joined ? '🎙️' : '📞'}</span>{vs.joining ? 'מתחבר…' : vs.joined ? 'שיחה קולית (מחובר)' : 'הצטרף לשיחה'}
+                    {!vs.joined && vs.members.length > 0 && <b className="pill green">{vs.members.length} בשיחה</b>}
+                  </button>
+                  <button onClick={() => { setSheet('chat'); setUnread(0); }}>
+                    <span>💬</span>צ׳אט{unread > 0 && <b className="pill">{unread}</b>}
+                  </button>
+                  <button onClick={() => setSheet('emoji')}><span>😀</span>שלח אימוג׳י</button>
+                  <button onClick={() => { setSoundOn(!sound); setSound(!sound); if (!sound) setTimeout(playYourTurn, 50); }}>
+                    <span>{sound ? '🔊' : '🔇'}</span>{sound ? 'צלילים פועלים' : 'צלילים כבויים'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
         <button className="btn ghost small" onClick={() => setSheet('log')} aria-label="יומן">📜</button>
       </div>
       {canSkip && (
@@ -255,20 +286,6 @@ export default function Game({ view, act, skew, react, roomId, token }: {
 
       <div className="board-area">
         <Board view={view} mode={mode} />
-        {me && (
-          <div className="side-tools">
-            <button className={`tool ${vs.joined ? 'on' : ''}`} onClick={() => (vs.joined ? setSheet('voice') : voice.join())} aria-label="שיחה">
-              {vs.joining ? '…' : vs.joined ? (vs.muted ? '🔇' : '🎙️') : '📞'}
-              {!vs.joined && vs.members.length > 0 && <span className="badge green">{vs.members.length}</span>}
-            </button>
-            <button className="tool" onClick={() => { setSheet('chat'); setUnread(0); }} aria-label="צ׳אט">
-              💬{unread > 0 && <span className="badge">{unread}</span>}
-            </button>
-            <button className="tool" onClick={() => setSheet('emoji')} aria-label="אימוג׳י">😀</button>
-            <button className="tool" onClick={() => { setSoundOn(!sound); setSound(!sound); if (!sound) setTimeout(playYourTurn, 50); }}
-              aria-label={sound ? 'השתק צלילים' : 'הפעל צלילים'}>{sound ? '🔊' : '🔇'}</button>
-          </div>
-        )}
       </div>
 
       {me && (
