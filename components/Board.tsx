@@ -184,7 +184,9 @@ export default function Board({ view, mode }: { view: GameView; mode: PickMode }
           const d = b.type === 'city'
             ? `M${x - 14},${y + 10} L${x - 14},${y - 4} L${x - 6},${y - 12} L${x + 2},${y - 4} L${x + 2},${y - 2} L${x + 14},${y - 2} L${x + 14},${y + 10} Z`
             : `M${x - 9},${y + 8} L${x - 9},${y - 3} L${x},${y - 11} L${x + 9},${y - 3} L${x + 9},${y + 8} Z`;
-          return <path key={`v${vid}`} d={d} fill={colorOf[b.owner]} stroke="#2a1d10" strokeWidth={2.2} strokeLinejoin="round" filter="url(#sh)" />;
+          // Drawn 35% larger around the corner they stand on, so they read clearly over the painted tiles.
+          return <path key={`v${vid}`} d={d} fill={colorOf[b.owner]} stroke="#2a1d10" strokeWidth={1.8} strokeLinejoin="round" filter="url(#sh)"
+            transform={`translate(${x} ${y}) scale(1.35) translate(${-x} ${-y})`} />;
         })}
 
         {/* robber */}

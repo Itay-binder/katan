@@ -70,6 +70,21 @@ export default function Game({ view, act, skew, react, roomId, token }: {
     setTimeout(() => setRobbed(r => (r?.key === key ? null : r)), 2400);
   }, [view.stolen, me, view.players]);
 
+  // Every roll shows big tumbling dice to everyone. A roll is spotted by its new log line.
+  const rollLine = () => [...view.log].reverse().find(l => / הטיל \d+$/.test(l.text));
+  const lastRoll = useRef(rollLine()?.id ?? 0);
+  const rolledAt = useRef(0);
+  const [roll, setRoll] = useState<{ key: number; d: [number, number] } | null>(null);
+  useEffect(() => {
+    const line = rollLine();
+    if (!line || line.id <= lastRoll.current || !view.dice) return;
+    lastRoll.current = line.id;
+    rolledAt.current = Date.now();
+    const key = line.id;
+    setRoll({ key, d: view.dice });
+    setTimeout(() => setRoll(r => (r?.key === key ? null : r)), 2300);
+  }, [view.log, view.dice]);
+
   // New cards fly from the board into the hand.
   const [flyers, setFlyers] = useState<{ key: number; res: Res; sx: number; sy: number; ex: number; ey: number; delay: number }[]>([]);
   const prevHand = useRef<ResMap | null>(me?.resources ?? null);
@@ -100,12 +115,14 @@ export default function Game({ view, act, skew, react, roomId, token }: {
       }
     }
     if (!out.length) return;
-    // Big cards line up across the middle of the screen, then drop into the hand.
+    // Big cards line up across the middle of the screen, then drop into the hand (after the dice, if this was a roll).
+    const wait = Date.now() - rolledAt.current < 800 ? 1500 : 0;
+    out.forEach(o => { o.delay += wait; });
     const step = Math.min(118, (window.innerWidth - 40) / out.length);
     out.forEach((o, i) => { o.sx = window.innerWidth / 2 + (i - (out.length - 1) / 2) * step; o.sy = board.top + board.height * .45; });
     setFlyers(f => [...f, ...out]);
     const done = new Set(out.map(o => o.key));
-    setTimeout(() => setFlyers(f => f.filter(o => !done.has(o.key))), 1500 + out.length * 140);
+    setTimeout(() => setFlyers(f => f.filter(o => !done.has(o.key))), wait + 1500 + out.length * 140);
   }, [me?.resources]);
   const [now, setNow] = useState(() => Date.now() + skew);
 
@@ -374,6 +391,7 @@ export default function Game({ view, act, skew, react, roomId, token }: {
           }}>{RES_ICON[robbed.res]}</div>
         </div>
       )}
+      {roll && <DiceShow key={roll.key} d={roll.d} />}
       {flyers.map(f => (
         <div key={f.key} className={`flycard r-${f.res}`} style={{
           left: f.sx, top: f.sy, animationDelay: `${f.delay}ms`,
@@ -427,6 +445,37 @@ function statusText(v: GameView, me: PublicPlayer | null, myTurn: boolean, build
     case 'steal': return `${n} בוחר ממי לגנוב`;
     default: return `התור של ${n}`;
   }
+}
+
+const PIPS: Record<number, number[]> = { 1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8] };
+
+function Die({ n, spin }: { n: number; spin: number }) {
+  return (
+    <div className="die-big" style={{ animationDelay: `${spin}ms` }}>
+      {Array.from({ length: 9 }, (_, i) => <span key={i} className={PIPS[n].includes(i) ? 'pip' : ''} />)}
+    </div>
+  );
+}
+
+/** Two big dice tumble in, land on the result, and the sum pops under them. */
+function DiceShow({ d }: { d: [number, number] }) {
+  const [face, setFace] = useState<[number, number]>([1 + Math.floor(Math.random() * 6), 1 + Math.floor(Math.random() * 6)]);
+  useEffect(() => {
+    let n = 0;
+    const iv = setInterval(() => {
+      n++;
+      if (n >= 7) { setFace(d); clearInterval(iv); return; }
+      setFace([1 + Math.floor(Math.random() * 6), 1 + Math.floor(Math.random() * 6)]);
+    }, 85);
+    return () => clearInterval(iv);
+  }, [d]);
+  const sum = d[0] + d[1];
+  return (
+    <div className="dice-show">
+      <div className="dice-row"><Die n={face[0]} spin={0} /><Die n={face[1]} spin={60} /></div>
+      <div className={`dice-sum ${sum === 7 ? 'seven' : ''}`}>{sum}</div>
+    </div>
+  );
 }
 
 function PlayerChip({ p, view, turn, inCall, talking, offline }: { p: PublicPlayer; view: GameView; turn: boolean; inCall: boolean; talking: boolean; offline: boolean }) {
