@@ -20,6 +20,7 @@ export const RES_ICON: Record<Res | 'desert', string> = {
 };
 
 const S = 60; // svg px per hex unit
+const TILE_W = Math.sqrt(3) * S; // pointy-top hex width
 const pts = (vs: number[]) => vs.map(v => `${VERTICES[v].x * S},${VERTICES[v].y * S}`).join(' ');
 
 // Fixed board frame (with room for ports outside the coast)
@@ -143,15 +144,19 @@ export default function Board({ view, mode }: { view: GameView; mode: PickMode }
           const pips = hx.number ? 6 - Math.abs(7 - hx.number) : 0;
           return (
             <g key={`h${h.id}`}>
-              <polygon points={pts(h.vertices)} fill={TERRAIN_FILL[hx.terrain]} stroke="#f3e6c4" strokeWidth={3} />
-              <text x={cx} y={cy - 22} textAnchor="middle" fontSize={20} opacity={.9}>{RES_ICON[hx.terrain]}</text>
+              {/* painted tile: the colour shows while the picture loads */}
+              <clipPath id={`hc${h.id}`}><polygon points={pts(h.vertices)} /></clipPath>
+              <polygon points={pts(h.vertices)} fill={TERRAIN_FILL[hx.terrain]} />
+              <image href={`/tiles/${hx.terrain}.webp`} x={cx - TILE_W / 2} y={cy - S} width={TILE_W} height={2 * S}
+                preserveAspectRatio="xMidYMid slice" clipPath={`url(#hc${h.id})`} />
+              <polygon points={pts(h.vertices)} fill="none" stroke="#e2bd52" strokeWidth={2.5} strokeLinejoin="round" />
               {hx.number && (
                 <g filter="url(#sh)">
-                  <circle cx={cx} cy={cy + 8} r={17} fill="#fbf4e2" />
-                  <text x={cx} y={cy + 13} textAnchor="middle" fontSize={hot ? 18 : 16} fontWeight={800}
+                  <circle cx={cx} cy={cy + 6} r={17} fill="#fbf4e2" stroke="#c9a347" strokeWidth={1.5} />
+                  <text x={cx} y={cy + 11} textAnchor="middle" fontSize={hot ? 18 : 16} fontWeight={800}
                     fill={hot ? '#c0392b' : '#2a1d10'} fontFamily="Secular One, sans-serif">{hx.number}</text>
                   {Array.from({ length: pips }).map((_, i) => (
-                    <circle key={i} cx={cx + (i - (pips - 1) / 2) * 4} cy={cy + 19} r={1.4} fill={hot ? '#c0392b' : '#2a1d10'} />
+                    <circle key={i} cx={cx + (i - (pips - 1) / 2) * 4} cy={cy + 17} r={1.4} fill={hot ? '#c0392b' : '#2a1d10'} />
                   ))}
                 </g>
               )}
