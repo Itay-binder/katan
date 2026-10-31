@@ -1,6 +1,7 @@
 'use client';
 import { createClient, type RealtimeChannel, type SupabaseClient } from '@supabase/supabase-js';
 import type { Action, GameView } from './engine/types';
+import type { Seen } from './engine/presence';
 
 const tokenKey = (id: string) => `katan:${id}`;
 export function getToken(id: string): string | null {
@@ -42,8 +43,8 @@ export interface ChatMsg { id: number; player_id: string; name: string; color: s
 
 // One realtime channel per room. The server pushes 'update' and 'chat'; players push 'emoji' and 'voice'
 // (voice call signalling) straight to each other. Components listen through `onRoomEvent`.
-const EVENTS = ['update', 'emoji', 'chat', 'voice'] as const;
-export type RoomEvent = (typeof EVENTS)[number] | 'presence';
+const EVENTS = ['update', 'emoji', 'chat', 'voice', 'presence'] as const;
+export type RoomEvent = (typeof EVENTS)[number];
 const channels = new Map<string, RealtimeChannel>();
 const bus = typeof window !== 'undefined' ? new EventTarget() : null;
 
@@ -60,33 +61,26 @@ export function subscribeRoom(id: string, onUpdate: () => void): () => void {
   sb ||= createClient(SB_URL!, SB_KEY!, { auth: { persistSession: false } });
   let ch = sb.channel(`katan-${id}`);
   for (const ev of EVENTS) ch = ch.on('broadcast', { event: ev }, m => bus?.dispatchEvent(new CustomEvent(ev, { detail: m.payload })));
-  // Who has the game open right now (each screen announces its player id).
-  ch = ch.on('presence', { event: 'sync' }, () => {
-    const ids = Object.values(ch.presenceState()).flat().map(x => (x as { pid?: string }).pid).filter(Boolean);
-    bus?.dispatchEvent(new CustomEvent('presence', { detail: [...new Set(ids)] }));
-  });
-  ch.subscribe(status => { if (status === 'SUBSCRIBED') { joined.add(id); announce(id); } });
+  ch.subscribe();
   channels.set(id, ch);
-  return () => { off(); channels.delete(id); joined.delete(id); sb?.removeChannel(ch); };
-}
-
-const joined = new Set<string>();
-const presenceAs = new Map<string, string>();
-function announce(id: string) {
-  const pid = presenceAs.get(id);
-  if (pid && joined.has(id)) channels.get(id)?.track({ pid }).catch(() => {});
-}
-/** Marks this screen as player `pid` being online in the room. */
-export function setPresence(id: string, pid: string | null) {
-  if (!pid) return;
-  presenceAs.set(id, pid);
-  announce(id);
+  return () => { off(); channels.delete(id); sb?.removeChannel(ch); };
 }
 
 /** Sends straight to the other players in the room (not to yourself). Nothing is stored. */
 export function sendRoomEvent(id: string, event: 'emoji' | 'voice', payload: unknown) {
   channels.get(id)?.send({ type: 'broadcast', event, payload });
 }
+
+export const presenceApi = {
+  list: (id: string) => call<{ presence: Record<string, Seen>; now: number }>(`/api/rooms/${id}/presence`),
+  /** keepalive lets the 'away' report get out even while the phone is switching apps. */
+  mark: (id: string, token: string | null, away: boolean) =>
+    fetch(`/api/rooms/${id}/presence`, {
+      method: 'POST', keepalive: true, cache: 'no-store',
+      headers: { 'Content-Type': 'application/json', ...(token ? { 'x-token': token } : {}) },
+      body: JSON.stringify({ away }),
+    }).catch(() => {}),
+};
 
 export const chatApi = {
   list: (id: string) => call<{ messages: ChatMsg[] }>(`/api/rooms/${id}/chat`),

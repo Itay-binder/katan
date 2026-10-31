@@ -1,8 +1,8 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import Board, { RES_ICON, type PickMode } from './Board';
-import { ChatPanel, useChat, useVoice } from './Social';
-import { onRoomEvent, setPresence } from '@/lib/client';
+import { ChatPanel, useChat, usePresence, useVoice } from './Social';
+import { awayFor } from '@/lib/engine/presence';
 import {
   affordable, piecesLeft, robbableOn, tradeRatios, validCities, validRoads, validSettlements,
   validSetupRoads, validSetupSettlements,
@@ -102,12 +102,14 @@ export default function Game({ view, act, skew, react, roomId, token }: {
   const voice = useVoice(roomId, me?.id ?? null);
 
   // Who has the game open, and skipping a player who stopped moving.
-  const [online, setOnline] = useState<string[] | null>(null);
-  useEffect(() => onRoomEvent<string[]>('presence', setOnline), []);
-  useEffect(() => { setPresence(roomId, me?.id ?? null); }, [roomId, me?.id]);
+  const seen = usePresence(roomId, token, me?.id ?? null);
   const lastMove = view.lastMoveAt ?? view.log[view.log.length - 1]?.t;
-  const idleMs = lastMove ? now - lastMove : 0;
-  const canSkip = view.phase === 'playing' && !!me && !myTurn && idleMs >= 60_000;
+  const away = (pid: string) => (seen ? awayFor(seen[pid], now, lastMove) : 0);
+  const waitingOn = view.phase !== 'playing' ? [] : view.sub === 'discard' ? Object.keys(view.discards) : [curP.id];
+  const goneMs = Math.max(0, ...waitingOn.map(away));
+  // Only someone who left the game (switched app, locked the phone, closed it) can be skipped.
+  const canSkip = !!me && !waitingOn.includes(me.id) && goneMs >= 60_000;
+  const goneNames = waitingOn.filter(pid => away(pid) >= 60_000).map(pid => view.players.find(p => p.id === pid)?.name).join(' ו');
   const vs = voice.state;
 
   // Big "your turn" banner each time the turn comes to you.
@@ -164,7 +166,7 @@ export default function Game({ view, act, skew, react, roomId, token }: {
         {view.players.map((p, i) => (
           <PlayerChip key={p.id} p={p} view={view} turn={i === view.current}
             inCall={vs.members.includes(p.id)} talking={vs.speaking.includes(p.id)}
-            offline={!!online && !online.includes(p.id)} />
+            offline={away(p.id) > 0} />
         ))}
       </div>
 
@@ -176,7 +178,7 @@ export default function Game({ view, act, skew, react, roomId, token }: {
       </div>
       {canSkip && (
         <div className="skipbar">
-          <span>{curP?.name} לא זז כבר {Math.floor(idleMs / 60_000)} דק׳{online && curP && !online.includes(curP.id) ? ' ולא מחובר' : ''}</span>
+          <span>{goneNames} יצא מהמשחק לפני {Math.floor(goneMs / 60_000)} דק׳</span>
           <button className="btn small" onClick={() => setSheet('skip')}>דלג על התור</button>
         </div>
       )}
@@ -254,7 +256,7 @@ export default function Game({ view, act, skew, react, roomId, token }: {
         );
       })()}
       {sheet === 'skip' && canSkip && (
-        <SheetFrame title={`לדלג על התור של ${curP?.name}?`} close={() => setSheet(null)}>
+        <SheetFrame title={`לדלג על ${goneNames}?`} close={() => setSheet(null)}>
           <p style={{ marginTop: 0 }}>המשחק ישלים בשבילו את מה שנשאר בתור (באקראי) ויעביר לשחקן הבא. אם הוא חוזר, הוא ממשיך לשחק כרגיל בתור הבא שלו.</p>
           <div className="row" style={{ gap: 8 }}>
             <button className="btn grow" onClick={() => { setSheet(null); act({ type: 'skipTurn' }); }}>כן, דלג</button>

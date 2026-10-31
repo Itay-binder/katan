@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { TOKEN_ORDER, generateBoard, spiralOrder } from './board';
+import { awayFor } from './presence';
 import { COAST, EDGES, HEXES, VERTICES } from './geometry';
 import { canBuildRoad, longestRoadLength, validSetupRoads, validSetupSettlements } from './queries';
 import { applyAction, createGame, joinGame, viewFor, totalVp } from './rules';
@@ -213,21 +214,25 @@ describe('turn flow', () => {
     expect(s.log[s.log.length - 1].text).toContain('ברזל');
   });
 
-  it('lets the others skip a player who has not moved for a minute', () => {
+  it('only a player who has been out of the game for a minute can be skipped', () => {
     const s = setupGame(3);
     playSetup(s);
-    const t0 = 1_000_000;
-    s.turnNo = 10; s.sub = 'main'; s.lastMoveAt = t0;
+    s.turnNo = 10; s.sub = 'main';
     const [stuck, other] = s.players;
-    expect(() => applyAction(s, other.id, { type: 'skipTurn' }, t0 + 30_000)).toThrow(GameError);
-    expect(() => applyAction(s, stuck.id, { type: 'skipTurn' }, t0 + 90_000)).toThrow(GameError);
-    applyAction(s, other.id, { type: 'skipTurn' }, t0 + 61_000);
+    // still in the game (thinking), however long: no skip
+    expect(() => applyAction(s, other.id, { type: 'skipTurn', awayMs: 0 }, 0)).toThrow(GameError);
+    expect(() => applyAction(s, other.id, { type: 'skipTurn', awayMs: 59_000 }, 0)).toThrow(GameError);
+    expect(() => applyAction(s, stuck.id, { type: 'skipTurn', awayMs: 90_000 }, 0)).toThrow(GameError);
+    applyAction(s, other.id, { type: 'skipTurn', awayMs: 61_000 }, 5);
     expect(s.current).toBe(1);
     expect(s.sub).toBe('roll');
-    expect(s.lastMoveAt).toBe(t0 + 61_000);
-    // a move by the current player resets the clock
-    applyAction(s, other.id, { type: 'roll' }, t0 + 200_000, () => 0.1);
-    expect(s.lastMoveAt).toBe(t0 + 200_000);
+  });
+
+  it('counts a player as away after switching apps, or when the heartbeat stops', () => {
+    expect(awayFor({ seenAt: 1000, awaySince: null }, 30_000)).toBe(0);
+    expect(awayFor({ seenAt: 1000, awaySince: 1000 }, 61_000)).toBe(60_000);
+    expect(awayFor({ seenAt: 1000, awaySince: null }, 100_000)).toBe(99_000);
+    expect(awayFor(undefined, 100_000)).toBe(0);
   });
 
   it('rolling a 7 forces discards then robber', () => {

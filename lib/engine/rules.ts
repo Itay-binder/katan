@@ -15,8 +15,14 @@ export const MIN_PLAYERS = 2;
 export const WIN_VP = 10;
 /** House rule: a 7 in the first rounds is rolled again; the robber only wakes up afterwards. */
 export const SAFE_ROUNDS = 3;
-/** Without a turn timer, the others may skip a player who has not moved for this long. */
+/** The others may skip a player who has been out of the game (not just thinking) for this long. */
 export const SKIP_AFTER_MS = 60_000;
+
+/** Players the game is waiting for right now. */
+export function blockers(s: GameState): string[] {
+  if (s.phase !== 'playing') return [];
+  return s.sub === 'discard' ? Object.keys(s.discards) : [s.players[s.current].id];
+}
 const LOG_KEEP = 60;
 
 const randId = (rng: Rng, n = 10) => {
@@ -493,9 +499,10 @@ function reduce(s: GameState, pid: string, a: Action, now: number, rng: Rng): vo
     }
     case 'skipTurn': {
       if (s.phase !== 'playing') throw new GameError('המשחק לא פעיל');
-      if (cur(s).id === pid) throw new GameError('זה התור שלך');
-      if (now - (s.lastMoveAt ?? s.log[s.log.length - 1]?.t ?? 0) < SKIP_AFTER_MS) throw new GameError('אפשר לדלג רק אחרי דקה בלי תזוזה');
-      log(s, `${player(s, pid).name} דילג על התור של ${cur(s).name}`);
+      if (blockers(s).includes(pid)) throw new GameError('מחכים לך, אי אפשר לדלג על עצמך');
+      // awayMs is filled in by the server from the presence table, never taken from the client.
+      if ((a.awayMs ?? 0) < SKIP_AFTER_MS) throw new GameError('השחקן עדיין במשחק, אי אפשר לדלג עליו');
+      log(s, `${player(s, pid).name} דילג על ${blockers(s).map(id => player(s, id).name).join(' ו')} (לא היה במשחק)`);
       resolveTimeout(s, now, rng, true);
       return;
     }

@@ -84,7 +84,7 @@ export type Action =
   | { type: 'moveRobber'; hex: number }
   | { type: 'steal'; target: string; pick?: number }
   | { type: 'showStolen' }
-  | { type: 'skipTurn' }
+  | { type: 'skipTurn'; awayMs?: number }
   | { type: 'buildRoad'; edge: number }
   | { type: 'buildSettlement'; vertex: number }
   | { type: 'buildCity'; vertex: number }

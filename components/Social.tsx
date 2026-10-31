@@ -1,7 +1,8 @@
 'use client';
 // Chat and voice call for a room.
 import { useEffect, useRef, useState } from 'react';
-import { chatApi, onRoomEvent, type ChatMsg } from '@/lib/client';
+import { chatApi, onRoomEvent, presenceApi, type ChatMsg } from '@/lib/client';
+import { HEARTBEAT_MS, type Seen } from '@/lib/engine/presence';
 import { VoiceRoom, type VoiceState } from '@/lib/voice';
 
 const EMPTY: VoiceState = { joined: false, joining: false, muted: false, members: [], speaking: [], failed: [], error: '' };
@@ -23,6 +24,34 @@ export function useVoice(roomId: string, meId: string | null) {
     leave: () => room.current?.leave(),
     toggleMute: () => room.current?.toggleMute(),
   };
+}
+
+/** Reports whether this screen has the game open, and keeps the room's list of who is away. */
+export function usePresence(roomId: string, token: string | null, meId: string | null) {
+  const [seen, setSeen] = useState<Record<string, Seen> | null>(null);
+  useEffect(() => {
+    let alive = true;
+    const load = () => presenceApi.list(roomId).then(r => { if (alive) setSeen(r.presence); }).catch(() => {});
+    load();
+    const off = onRoomEvent('presence', load);
+    let iv: ReturnType<typeof setInterval> | null = null;
+    if (meId && token) {
+      const visible = () => document.visibilityState === 'visible';
+      const report = () => presenceApi.mark(roomId, token, !visible());
+      report();
+      iv = setInterval(() => { if (visible()) report(); }, HEARTBEAT_MS);
+      document.addEventListener('visibilitychange', report);
+      const gone = () => presenceApi.mark(roomId, token, true);
+      window.addEventListener('pagehide', gone);
+      return () => {
+        alive = false; off(); if (iv) clearInterval(iv);
+        document.removeEventListener('visibilitychange', report);
+        window.removeEventListener('pagehide', gone);
+      };
+    }
+    return () => { alive = false; off(); };
+  }, [roomId, token, meId]);
+  return seen;
 }
 
 /** Chat history plus live messages. `onIncoming` fires for messages from other players. */
