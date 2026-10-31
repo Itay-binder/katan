@@ -31,7 +31,9 @@ const FRAME = Array.from({ length: 6 }, (_, i) => {
   return `${FRAME_R * Math.cos(a)},${FRAME_R * Math.sin(a)}`;
 }).join(' ');
 const PAD = 0.12 * S;
-const minX = -FRAME_R - PAD, maxX = FRAME_R + PAD;
+// Width fits the island and its ports; the frame's left and right tips may run off the edge.
+const HALF_W = 5.27 * S;
+const minX = -HALF_W, maxX = HALF_W;
 const minY = -FRAME_R * Math.sin(Math.PI / 3) - PAD, maxY = FRAME_R * Math.sin(Math.PI / 3) + PAD;
 const BW = maxX - minX, BH = maxY - minY;
 
