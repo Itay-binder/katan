@@ -73,6 +73,7 @@ export default function Game({ view, act, skew, react, roomId, token }: {
   // New cards fly from the board into the hand.
   const [flyers, setFlyers] = useState<{ key: number; res: Res; sx: number; sy: number; ex: number; ey: number; delay: number }[]>([]);
   const prevHand = useRef<ResMap | null>(me?.resources ?? null);
+  const flySteal = useRef(JSON.stringify(view.stolen ? { ...view.stolen, shown: 0 } : null));
   useEffect(() => {
     const cur = me?.resources;
     const prev = prevHand.current;
@@ -80,9 +81,13 @@ export default function Game({ view, act, skew, react, roomId, token }: {
     if (!cur || !prev) return;
     const board = document.querySelector('.board-wrap')?.getBoundingClientRect();
     if (!board) return;
+    // A card you just stole is already shown big by the steal reveal; don't fly it as well.
+    const stealSig = JSON.stringify(view.stolen ? { ...view.stolen, shown: 0 } : null);
+    const justStole = view.stolen?.by === me?.id && stealSig !== flySteal.current ? view.stolen?.res : null;
+    flySteal.current = stealSig;
     const out: typeof flyers = [];
     for (const k of RES) {
-      const gain = cur[k] - prev[k];
+      const gain = cur[k] - prev[k] - (justStole === k ? 1 : 0);
       const slot = document.querySelector(`.bottom .hand .r-${k}`)?.getBoundingClientRect();
       if (gain <= 0 || !slot) continue;
       for (let i = 0; i < Math.min(gain, 5); i++) {
