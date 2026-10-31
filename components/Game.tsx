@@ -85,6 +85,21 @@ export default function Game({ view, act, skew, react, roomId, token }: {
     setTimeout(() => setBought(b => (b?.key === key ? null : b)), 2200);
   }, [me?.dev, view.turnNo]);
 
+  // When the robber moves, a big knight lands on screen for everyone, with where it went and who it blocks.
+  const [knight, setKnight] = useState<{ key: number; where: string; blocked: string; mine: boolean } | null>(null);
+  const lastRobber = useRef(view.robber);
+  useEffect(() => {
+    if (view.robber === lastRobber.current) return;
+    lastRobber.current = view.robber;
+    const hx = view.hexes[view.robber];
+    const where = hx.terrain === 'desert' ? 'המדבר' : `${RES_HE[hx.terrain]} ${hx.number}`;
+    const ids = robbableOn(view, view.robber, '');
+    const blocked = ids.map(id => view.players.find(p => p.id === id)?.name).join(' ו');
+    const key = Date.now();
+    setKnight({ key, where, blocked, mine: !!me && ids.includes(me.id) });
+    setTimeout(() => setKnight(k => (k?.key === key ? null : k)), 2300);
+  }, [view.robber]);
+
   // Every roll shows big tumbling dice to everyone. A roll is spotted by its new log line.
   const rollLine = () => [...view.log].reverse().find(l => / הטיל \d+$/.test(l.text));
   const lastRoll = useRef(rollLine()?.id ?? 0);
@@ -423,6 +438,15 @@ export default function Game({ view, act, skew, react, roomId, token }: {
         </div>
       )}
       {roll && <DiceShow key={roll.key} d={roll.d} />}
+      {knight && (
+        <div key={knight.key} className={`knight-show ${knight.mine ? 'mine' : ''}`}>
+          <img src="/robber.webp" alt="" />
+          <div className="knight-msg">
+            השודד על {knight.where}
+            {knight.blocked && <small>{knight.mine ? 'חוסם אותך!' : `חוסם את ${knight.blocked}`}</small>}
+          </div>
+        </div>
+      )}
       {bought && <DevReveal key={bought.key} type={bought.type} ready={devReady({ type: bought.type, boughtTurn: view.turnNo }, view.turnNo)} />}
       {flyers.map(f => (
         <div key={f.key} className={`flycard r-${f.res}`} style={{
