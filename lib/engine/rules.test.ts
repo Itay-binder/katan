@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { generateBoard } from './board';
+import { TOKEN_ORDER, generateBoard, spiralOrder } from './board';
 import { COAST, EDGES, HEXES, VERTICES } from './geometry';
 import { canBuildRoad, longestRoadLength, validSetupRoads, validSetupSettlements } from './queries';
 import { applyAction, createGame, joinGame, viewFor, totalVp } from './rules';
@@ -50,6 +50,24 @@ describe('board', () => {
       expect(b.hexes[b.robber].terrain).toBe('desert');
       expect(b.ports).toHaveLength(9);
       expect(new Set(b.ports.map(p => p.edge)).size).toBe(9);
+    }
+  });
+
+  it('lays tokens A..R along a counter-clockwise spiral from an outer corner', () => {
+    for (let i = 0; i < 50; i++) {
+      const b = generateBoard(seeded(i + 100));
+      const starts = [0, 2, 7, 11, 16, 18];
+      const match = starts.some(c => {
+        const seq = spiralOrder(c).map(id => b.hexes[id].number).filter(n => n !== null);
+        return seq.join() === TOKEN_ORDER.join();
+      });
+      expect(match).toBe(true);
+    }
+    // Every step of the spiral moves to a neighbouring hex.
+    for (const c of [0, 2, 7, 11, 16, 18]) {
+      const order = spiralOrder(c);
+      expect(new Set(order).size).toBe(19);
+      for (let k = 1; k < 19; k++) expect(HEXES[order[k - 1]].neighbors).toContain(order[k]);
     }
   });
 });
