@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import Board, { RES_ICON, type PickMode } from './Board';
 import { ChatPanel, useChat, usePresence, useVoice } from './Social';
 import { awayFor } from '@/lib/engine/presence';
+import { playRobber, playYourTurn, setSoundOn, soundOn } from '@/lib/sounds';
 import {
   affordable, piecesLeft, robbableOn, tradeRatios, validCities, validRoads, validSettlements,
   validSetupRoads, validSetupSettlements,
@@ -122,6 +123,16 @@ export default function Game({ view, act, skew, react, roomId, token }: {
   });
   const voice = useVoice(roomId, me?.id ?? null);
 
+  // Sounds: the robber call for everyone when a 7 or a knight brings the robber out.
+  const [sound, setSound] = useState(true);
+  useEffect(() => { setSound(soundOn()); }, []);
+  const prevSub = useRef(view.sub);
+  useEffect(() => {
+    const robberPhase = (x: string) => x === 'discard' || x === 'robber';
+    if (robberPhase(view.sub) && !robberPhase(prevSub.current)) playRobber();
+    prevSub.current = view.sub;
+  }, [view.sub]);
+
   // Who has the game open, and skipping a player who stopped moving.
   const seen = usePresence(roomId, token, me?.id ?? null);
   const lastMove = view.lastMoveAt ?? view.log[view.log.length - 1]?.t;
@@ -139,6 +150,7 @@ export default function Game({ view, act, skew, react, roomId, token }: {
   useEffect(() => {
     if (myTurn && !wasMine.current) {
       setYourTurn(true);
+      playYourTurn();
       try { navigator.vibrate?.(200); } catch { /* not supported */ }
       const t = setTimeout(() => setYourTurn(false), 2200);
       wasMine.current = myTurn;
@@ -216,6 +228,8 @@ export default function Game({ view, act, skew, react, roomId, token }: {
               💬{unread > 0 && <span className="badge">{unread}</span>}
             </button>
             <button className="tool" onClick={() => setSheet('emoji')} aria-label="אימוג׳י">😀</button>
+            <button className="tool" onClick={() => { setSoundOn(!sound); setSound(!sound); if (!sound) setTimeout(playYourTurn, 50); }}
+              aria-label={sound ? 'השתק צלילים' : 'הפעל צלילים'}>{sound ? '🔊' : '🔇'}</button>
           </div>
         )}
       </div>
