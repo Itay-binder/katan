@@ -7,6 +7,7 @@ export const metadata: Metadata = {
   // "Add to Home Screen" on iPhone opens it full screen with its own icon, like an app.
   appleWebApp: { capable: true, title: 'Katan', statusBarStyle: 'black-translucent' },
   icons: { apple: '/apple-touch-icon.png', icon: '/icon-192.png' },
+  other: { 'apple-mobile-web-app-capable': 'yes' }, // older iPhones read only this name
 };
 
 export const viewport: Viewport = {
