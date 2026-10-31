@@ -61,6 +61,9 @@ export interface GameState {
   stealFrom: string[];
   /** When the player whose move it is last did something (or their turn began). */
   lastMoveAt?: number;
+  /** Game clock: when play started and when someone won. */
+  startedAt?: number;
+  endedAt?: number;
   /** Last card taken by the robber this turn. Only thief and victim see `res` until the thief shows it. */
   stolen?: { by: string; from: string; res: Res | null; shown: boolean } | null;
   trade: Trade | null;

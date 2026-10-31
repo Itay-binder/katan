@@ -150,7 +150,7 @@ function checkWin(s: GameState) {
   if (s.phase !== 'playing') return;
   const p = cur(s);
   if (totalVp(s, p.id) >= WIN_VP) {
-    s.phase = 'ended'; s.winner = p.id; s.deadline = null; s.trade = null;
+    s.phase = 'ended'; s.winner = p.id; s.deadline = null; s.trade = null; s.endedAt = Date.now();
     log(s, `${p.name} ניצח עם ${totalVp(s, p.id)} נקודות!`);
   }
 }
@@ -257,7 +257,7 @@ function reduce(s: GameState, pid: string, a: Action, now: number, rng: Rng): vo
       if (pid !== s.hostId) throw new GameError('רק מי שפתח את החדר יכול להתחיל');
       if (s.players.length < MIN_PLAYERS) throw new GameError(`צריך לפחות ${MIN_PLAYERS} שחקנים`);
       s.players = shuffle(s.players, rng);
-      s.phase = 'playing'; s.setupStep = 0; s.current = 0; s.sub = 'setupSettlement';
+      s.phase = 'playing'; s.setupStep = 0; s.current = 0; s.sub = 'setupSettlement'; s.startedAt = now;
       setDeadline(s, now);
       log(s, `המשחק התחיל. סדר: ${s.players.map(p => p.name).join(', ')}`);
       return;

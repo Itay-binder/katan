@@ -18,6 +18,17 @@ type Act = (a: Action, quiet?: boolean) => Promise<boolean>;
 type Sheet = null | 'build' | 'trade' | 'dev' | 'log' | 'end' | 'emoji' | 'chat' | 'voice' | 'skip';
 const EMOJIS = ['👍', '😂', '😡', '😱', '🔥', '🖕🏻', '🤝', '😈', '🙏', '🐑', '🧱', '😴'];
 
+/** How long the game has been going (h:mm:ss or m:ss). Older rooms fall back to the "game started" log line. */
+export function gameClock(view: GameView, now: number): string {
+  const start = view.startedAt ?? view.log.find(l => l.text.startsWith('המשחק התחיל'))?.t;
+  if (!start) return '';
+  const end = view.phase === 'ended' ? (view.endedAt ?? view.log[view.log.length - 1]?.t ?? now) : now;
+  const sec = Math.max(0, Math.floor((end - start) / 1000));
+  const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), x = sec % 60;
+  const two = (n: number) => String(n).padStart(2, '0');
+  return h ? `${h}:${two(m)}:${two(x)}` : `${m}:${two(x)}`;
+}
+
 const costIcons = (c: Partial<ResMap>) =>
   RES.filter(k => c[k]).map(k => `${RES_ICON[k]}${c[k]! > 1 ? '×' + c[k] : ''}`).join(' ');
 const resLine = (r: ResMap) => RES.filter(k => r[k]).map(k => `${r[k]} ${RES_ICON[k]}`).join('  ');
@@ -207,6 +218,7 @@ export default function Game({ view, act, skew, react, roomId, token }: {
         {view.dice && <div className="dice"><span className="die">{view.dice[0]}</span><span className="die">{view.dice[1]}</span></div>}
         <span className="msg">{statusText(view, me, myTurn, build)}</span>
         {secsLeft !== null && view.phase === 'playing' && <span className={`timer ${secsLeft <= 10 ? 'low' : ''}`}>{secsLeft}</span>}
+        <span className="clock" title="זמן משחק">⏱ {gameClock(view, now)}</span>
         <button className="btn ghost small" onClick={() => setSheet('log')} aria-label="יומן">📜</button>
       </div>
       {canSkip && (
@@ -754,7 +766,8 @@ function WinOverlay({ view }: { view: GameView }) {
     <div className="overlay">
       <div className="card win-card">
         <div style={{ fontSize: 52, textAlign: 'center' }}>🏆</div>
-        <h2 style={{ margin: '0 0 12px', fontSize: 30, textAlign: 'center' }}>{w?.name} ניצח!</h2>
+        <h2 style={{ margin: '0 0 4px', fontSize: 30, textAlign: 'center' }}>{w?.name} ניצח!</h2>
+        <p style={{ margin: '0 0 12px', textAlign: 'center', color: 'var(--ink-soft)' }}>⏱ המשחק נמשך {gameClock(view, Date.now())}</p>
         <div className="win-list">
           {ranked.map(p => (
             <div key={p.id} className={`win-row ${p.id === view.winner ? 'won' : ''}`}>
