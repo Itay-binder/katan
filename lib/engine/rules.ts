@@ -198,6 +198,16 @@ function steal(s: GameState, targetId: string, rng: Rng) {
   s.stealFrom = []; s.sub = s.afterRobber;
 }
 
+/** Second-round settlement: one card from each tile around it. */
+function startingResources(s: GameState, p: Player, vertex: number) {
+  const got: Partial<ResMap> = {};
+  for (const h of VERTICES[vertex].hexes) {
+    const t = s.hexes[h].terrain;
+    if (t !== 'desert' && give(s, p, t, 1)) got[t] = (got[t] || 0) + 1;
+  }
+  log(s, Object.keys(got).length ? `${p.name} קיבל ${fmt(got)} מהיישוב ליד ${spotName(s, vertex)}` : `${p.name} בחר יישוב בלי משאבים`);
+}
+
 function requireTurn(s: GameState, pid: string, ...subs: GameState['sub'][]) {
   if (s.phase !== 'playing') throw new GameError('המשחק לא פעיל');
   if (cur(s).id !== pid) throw new GameError('זה לא התור שלך');
@@ -243,14 +253,16 @@ function reduce(s: GameState, pid: string, a: Action, now: number, rng: Rng): vo
       s.buildings[a.vertex] = { owner: p.id, type: 'settlement' };
       s.lastSetupVertex = a.vertex;
       log(s, `${p.name} הניח יישוב ליד ${spotName(s, a.vertex)}`);
-      if (s.setupStep >= s.players.length) {
-        const got: Partial<ResMap> = {};
-        for (const h of VERTICES[a.vertex].hexes) {
-          const t = s.hexes[h].terrain;
-          if (t !== 'desert' && give(s, p, t, 1)) got[t] = (got[t] || 0) + 1;
-        }
-        if (Object.keys(got).length) log(s, `${p.name} קיבל ${fmt(got)}`);
-      }
+      // House rule: the last player places both settlements back to back and picks which one pays out.
+      if (s.setupStep === s.players.length) { s.sub = 'setupPickStart'; return; }
+      if (s.setupStep > s.players.length) startingResources(s, p, a.vertex);
+      s.sub = 'setupRoad';
+      return;
+    }
+    case 'pickStart': {
+      requireTurn(s, pid, 'setupPickStart');
+      if (s.buildings[a.vertex]?.owner !== pid) throw new GameError('בחר אחד מהיישובים שלך');
+      startingResources(s, cur(s), a.vertex);
       s.sub = 'setupRoad';
       return;
     }
@@ -486,6 +498,8 @@ function resolveTimeout(s: GameState, now: number, rng: Rng) {
     switch (s.sub) {
       case 'setupSettlement':
         applyAction(s, pid, { type: 'placeSettlement', vertex: pick(validSetupSettlements(s)) }, now, rng); break;
+      case 'setupPickStart':
+        applyAction(s, pid, { type: 'pickStart', vertex: pick(Object.keys(s.buildings).map(Number).filter(v => s.buildings[v].owner === pid)) }, now, rng); break;
       case 'setupRoad':
         applyAction(s, pid, { type: 'placeRoad', edge: pick(validSetupRoads(s, s.lastSetupVertex)) }, now, rng); break;
       case 'roll':

@@ -22,7 +22,7 @@ export interface Player {
 }
 
 export type Sub =
-  | 'setupSettlement' | 'setupRoad'
+  | 'setupSettlement' | 'setupRoad' | 'setupPickStart'
   | 'roll' | 'discard' | 'robber' | 'steal'
   | 'main' | 'roadBuilding';
 
@@ -74,6 +74,7 @@ export type Action =
   | { type: 'start' }
   | { type: 'placeSettlement'; vertex: number }
   | { type: 'placeRoad'; edge: number }
+  | { type: 'pickStart'; vertex: number }
   | { type: 'roll' }
   | { type: 'discard'; cards: ResMap }
   | { type: 'moveRobber'; hex: number }

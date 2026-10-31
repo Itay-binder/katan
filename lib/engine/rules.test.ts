@@ -20,11 +20,13 @@ function setupGame(n = 3, seed = 1): GameState {
 
 function playSetup(s: GameState) {
   const rng = seeded(7);
-  while (s.sub === 'setupSettlement' || s.sub === 'setupRoad') {
+  while (s.sub === 'setupSettlement' || s.sub === 'setupRoad' || s.sub === 'setupPickStart') {
     const pid = s.players[s.current].id;
     if (s.sub === 'setupSettlement') {
       const opts = validSetupSettlements(s);
       applyAction(s, pid, { type: 'placeSettlement', vertex: opts[Math.floor(rng() * opts.length)] }, 0, rng);
+    } else if (s.sub === 'setupPickStart') {
+      applyAction(s, pid, { type: 'pickStart', vertex: s.lastSetupVertex! }, 0, rng);
     } else {
       applyAction(s, pid, { type: 'placeRoad', edge: validSetupRoads(s, s.lastSetupVertex)[0] }, 0, rng);
     }
@@ -93,8 +95,9 @@ describe('setup phase', () => {
     const s = setupGame(3);
     const order: string[] = [];
     const rng = seeded(3);
-    while (s.sub === 'setupSettlement' || s.sub === 'setupRoad') {
+    while (s.sub === 'setupSettlement' || s.sub === 'setupRoad' || s.sub === 'setupPickStart') {
       const pid = s.players[s.current].id;
+      if (s.sub === 'setupPickStart') { applyAction(s, pid, { type: 'pickStart', vertex: s.lastSetupVertex! }, 0); continue; }
       if (s.sub === 'setupSettlement') {
         order.push(pid);
         const opts = validSetupSettlements(s);
@@ -107,6 +110,29 @@ describe('setup phase', () => {
     expect(s.current).toBe(0);
     const total = s.players.reduce((a, p) => a + resTotal(p.resources), 0);
     expect(total).toBeGreaterThan(0);
+  });
+
+  it('lets the last player choose which of their two settlements pays the starting cards', () => {
+    const s = setupGame(2);
+    const [a, b] = s.players.map(p => p.id);
+    applyAction(s, a, { type: 'placeSettlement', vertex: 0 }, 0);
+    applyAction(s, a, { type: 'placeRoad', edge: VERTICES[0].edges[0] }, 0);
+    // b is last: first settlement on a corner touching 3 tiles, second on a far one
+    const rich = VERTICES.find(v => v.hexes.length === 3 && validSetupSettlements(s).includes(v.id) && v.hexes.every(h => s.hexes[h].terrain !== 'desert'))!.id;
+    applyAction(s, b, { type: 'placeSettlement', vertex: rich }, 0);
+    applyAction(s, b, { type: 'placeRoad', edge: VERTICES[rich].edges[0] }, 0);
+    const second = validSetupSettlements(s).find(v => VERTICES[v].hexes.length === 1)!;
+    applyAction(s, b, { type: 'placeSettlement', vertex: second }, 0);
+    expect(s.sub).toBe('setupPickStart');
+    expect(resTotal(s.players[1].resources)).toBe(0);
+    expect(() => applyAction(s, b, { type: 'pickStart', vertex: 0 }, 0)).toThrow(GameError); // not theirs
+    applyAction(s, b, { type: 'pickStart', vertex: rich }, 0);
+    expect(resTotal(s.players[1].resources)).toBe(3);
+    expect(s.sub).toBe('setupRoad');
+    // the road still has to leave the settlement just placed
+    expect(() => applyAction(s, b, { type: 'placeRoad', edge: VERTICES[rich].edges[1] }, 0)).toThrow(GameError);
+    applyAction(s, b, { type: 'placeRoad', edge: VERTICES[second].edges[0] }, 0);
+    expect(s.current).toBe(0);
   });
 
   it('rejects settlements next to each other and roads away from the new settlement', () => {

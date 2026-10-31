@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import Board, { RES_ICON, type PickMode } from './Board';
 import { ChatPanel, useChat, useVoice } from './Social';
 import {
-  affordable, piecesLeft, tradeRatios, validCities, validRoads, validSettlements,
+  affordable, piecesLeft, robbableOn, tradeRatios, validCities, validRoads, validSettlements,
   validSetupRoads, validSetupSettlements,
 } from '@/lib/engine/queries';
 import { HEXES } from '@/lib/engine/geometry';
@@ -28,6 +28,7 @@ export default function Game({ view, act, skew, react, roomId, token }: {
   const myTurn = view.phase === 'playing' && !!me && curP?.id === me.id;
   const [build, setBuild] = useState<null | 'road' | 'settlement' | 'city'>(null);
   const [sheet, setSheet] = useState<Sheet>(null);
+  const [robberAt, setRobberAt] = useState<number | null>(null);
   const [now, setNow] = useState(() => Date.now() + skew);
 
   useEffect(() => {
@@ -93,10 +94,12 @@ export default function Game({ view, act, skew, react, roomId, token }: {
   if (myTurn && me) {
     if (view.sub === 'setupSettlement')
       mode = { kind: 'vertex', ids: validSetupSettlements(view), onPick: v => act({ type: 'placeSettlement', vertex: v }) };
+    else if (view.sub === 'setupPickStart')
+      mode = { kind: 'vertex', ids: Object.keys(view.buildings).map(Number).filter(v => view.buildings[v].owner === me.id), onPick: v => act({ type: 'pickStart', vertex: v }) };
     else if (view.sub === 'setupRoad')
       mode = { kind: 'edge', ids: validSetupRoads(view, view.lastSetupVertex), onPick: e => act({ type: 'placeRoad', edge: e }) };
     else if (view.sub === 'robber')
-      mode = { kind: 'hex', ids: HEXES.filter(h => h.id !== view.robber).map(h => h.id), onPick: h => act({ type: 'moveRobber', hex: h }) };
+      mode = { kind: 'hex', ids: HEXES.filter(h => h.id !== view.robber).map(h => h.id), onPick: h => setRobberAt(h) };
     else if (view.sub === 'roadBuilding')
       mode = { kind: 'edge', ids: validRoads(view, me.id), onPick: e => act({ type: 'buildRoad', edge: e }) };
     else if (view.sub === 'main' && build) {
@@ -182,6 +185,22 @@ export default function Game({ view, act, skew, react, roomId, token }: {
           </div>
         </SheetFrame>
       )}
+      {robberAt !== null && myTurn && view.sub === 'robber' && (() => {
+        const hx = view.hexes[robberAt];
+        const where = hx.terrain === 'desert' ? 'המדבר' : `${RES_ICON[hx.terrain]} ${RES_HE[hx.terrain]} ${hx.number}`;
+        const blocked = robbableOn(view, robberAt, '').map(id => view.players.find(p => p.id === id)!);
+        return (
+          <SheetFrame title={`לשים את השודד על ${where}?`} close={() => setRobberAt(null)}>
+            <p style={{ marginTop: 0 }}>
+              {blocked.length ? <>חוסם את: {blocked.map(p => <b key={p.id} className={`t-${p.color}`}>{p.name}{p.id === me?.id ? ' (אתה)' : ''} </b>)}</> : 'אין כאן אף אחד לחסום'}
+            </p>
+            <div className="row" style={{ gap: 8 }}>
+              <button className="btn grow" onClick={() => { const h = robberAt; setRobberAt(null); act({ type: 'moveRobber', hex: h }); }}>כן, שים כאן</button>
+              <button className="btn light grow" onClick={() => setRobberAt(null)}>בחר משבצת אחרת</button>
+            </div>
+          </SheetFrame>
+        );
+      })()}
       {sheet === 'chat' && (
         <ChatPanel roomId={roomId} token={token} meId={me?.id ?? null} messages={chat.messages} add={chat.add}
           close={() => { setSheet(null); setUnread(0); }} />
@@ -237,6 +256,7 @@ function statusText(v: GameView, me: PublicPlayer | null, myTurn: boolean, build
   if (myTurn) {
     switch (v.sub) {
       case 'setupSettlement': return 'בחר מקום ליישוב (הנקודות הצהובות)';
+      case 'setupPickStart': return 'בחר מאיזה יישוב לקבל את משאבי הפתיחה';
       case 'setupRoad': return 'בחר דרך שיוצאת מהיישוב';
       case 'roll': return v.dice && v.dice[0] + v.dice[1] === 7 ? 'יצא 7 בסבבים הראשונים: הטל שוב' : 'התור שלך: הטל קוביות';
       case 'discard': return 'מחכים שכולם יזרקו קלפים…';
@@ -253,6 +273,7 @@ function statusText(v: GameView, me: PublicPlayer | null, myTurn: boolean, build
   const n = cur?.name ?? '';
   switch (v.sub) {
     case 'setupSettlement': return `${n} בוחר מקום ליישוב`;
+    case 'setupPickStart': return `${n} בוחר מאיזה יישוב לקבל משאבים`;
     case 'setupRoad': return `${n} בוחר דרך`;
     case 'roll': return v.dice && v.dice[0] + v.dice[1] === 7 ? `יצא 7, ${n} מטיל שוב` : `${n} מטיל קוביות`;
     case 'discard': return 'מחכים שכולם יזרקו קלפים…';
