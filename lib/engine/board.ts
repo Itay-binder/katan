@@ -1,4 +1,4 @@
-import { COAST, HEXES } from './geometry';
+import { COAST, EDGES, HEXES, VERTICES } from './geometry';
 import type { GameState, Res, Terrain } from './types';
 
 export type Rng = () => number;
@@ -32,9 +32,17 @@ export function spiralOrder(corner: number): number[] {
     .sort((p, q) => p.a - q.a).map(p => p.id);
   return [...around(2), ...around(1), ...around(0)];
 }
-const PORT_TYPES: (Res | 'any')[] = ['any', 'any', 'any', 'any', 'brick', 'lumber', 'wool', 'grain', 'ore'];
+const PORT_RES: Res[] = ['brick', 'lumber', 'wool', 'grain', 'ore'];
 // 30 coastal edges, 9 ports: gaps of 3,3,4 repeated (like the printed frame).
 const PORT_GAPS = [3, 3, 4, 3, 3, 4, 3, 3, 4];
+// How many tiles a port on this coastal edge touches (its two harbour corners together).
+const coastTouch = (e: number) => new Set([...VERTICES[EDGES[e].a].hexes, ...VERTICES[EDGES[e].b].hexes]).size;
+// Frame rotations that match the printed board: 6 spots touching two tiles, 3 touching one.
+const PORT_OFFSETS = COAST.map((_, off) => off).filter(off => {
+  let pos = off, ones = 0;
+  for (const g of PORT_GAPS) { if (coastTouch(COAST[pos % COAST.length]) === 1) ones++; pos += g; }
+  return ones === 3;
+});
 
 export function generateBoard(rng: Rng = Math.random): Pick<GameState, 'hexes' | 'ports' | 'robber'> {
   for (let attempt = 0; attempt < 500; attempt++) {
@@ -48,14 +56,18 @@ export function generateBoard(rng: Rng = Math.random): Pick<GameState, 'hexes' |
     const hot = (i: number) => hexes[i].number === 6 || hexes[i].number === 8;
     const ok = HEXES.every(h => !hot(h.id) || h.neighbors.every(nb => !hot(nb)));
     if (!ok) continue;
-    const types = shuffle(PORT_TYPES, rng);
-    const offset = Math.floor(rng() * COAST.length);
-    const ports: GameState['ports'] = [];
+    // Like the printed frame: every 2:1 port touches two tiles; the 3:1 ports touch one tile, except one that touches two.
+    const offset = PORT_OFFSETS[Math.floor(rng() * PORT_OFFSETS.length)];
+    const spots: number[] = [];
     let pos = offset;
-    for (let i = 0; i < 9; i++) {
-      ports.push({ edge: COAST[pos % COAST.length], type: types[i] });
-      pos += PORT_GAPS[i];
-    }
+    for (const g of PORT_GAPS) { spots.push(COAST[pos % COAST.length]); pos += g; }
+    const twoTile = shuffle(spots.filter(e => coastTouch(e) === 2), rng);
+    const oneTile = spots.filter(e => coastTouch(e) === 1);
+    const resTypes = shuffle(PORT_RES, rng);
+    const ports: GameState['ports'] = [
+      ...twoTile.map((edge, i) => ({ edge, type: i < 5 ? resTypes[i] : 'any' as const })),
+      ...oneTile.map(edge => ({ edge, type: 'any' as const })),
+    ];
     return { hexes, ports, robber: hexes.findIndex(h => h.terrain === 'desert') };
   }
   throw new Error('board generation failed');

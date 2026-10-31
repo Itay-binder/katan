@@ -50,6 +50,11 @@ describe('board', () => {
       expect(b.hexes[b.robber].terrain).toBe('desert');
       expect(b.ports).toHaveLength(9);
       expect(new Set(b.ports.map(p => p.edge)).size).toBe(9);
+      const touch = (e: number) => new Set([...VERTICES[EDGES[e].a].hexes, ...VERTICES[EDGES[e].b].hexes]).size;
+      for (const p of b.ports) if (p.type !== 'any') expect(touch(p.edge)).toBe(2);
+      const generic = b.ports.filter(p => p.type === 'any').map(p => touch(p.edge)).sort();
+      expect(generic).toEqual([1, 1, 1, 2]);
+      expect(new Set(b.ports.filter(p => p.type !== 'any').map(p => p.type)).size).toBe(5);
     }
   });
 
