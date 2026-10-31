@@ -108,6 +108,24 @@ export default function Board({ view, mode }: { view: GameView; mode: PickMode }
           <filter id="sh" x="-20%" y="-20%" width="140%" height="140%">
             <feDropShadow dx="0" dy="2" stdDeviation="2" floodOpacity=".35" />
           </filter>
+          {/* robber figure: lit from the upper left like a painted resin miniature */}
+          <linearGradient id="rbBody" x1="0" x2="1" y1="0" y2="0">
+            <stop offset="0" stopColor="#0d0d10" /><stop offset=".28" stopColor="#4a4a52" /><stop offset=".42" stopColor="#6c6c75" />
+            <stop offset=".62" stopColor="#2a2a30" /><stop offset="1" stopColor="#050506" />
+          </linearGradient>
+          <linearGradient id="rbFold" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0" stopColor="#000" stopOpacity="0" /><stop offset="1" stopColor="#000" stopOpacity=".45" />
+          </linearGradient>
+          <radialGradient id="rbHead" cx=".36" cy=".3" r=".75">
+            <stop offset="0" stopColor="#9a9aa3" /><stop offset=".35" stopColor="#4b4b53" /><stop offset=".8" stopColor="#141417" /><stop offset="1" stopColor="#050506" />
+          </radialGradient>
+          <linearGradient id="rbBase" x1="0" x2="1" y1="0" y2="0">
+            <stop offset="0" stopColor="#111" /><stop offset=".35" stopColor="#55555c" /><stop offset="1" stopColor="#0a0a0a" />
+          </linearGradient>
+          <radialGradient id="rbBaseTop" cx=".4" cy=".35" r=".8">
+            <stop offset="0" stopColor="#6a6a72" /><stop offset="1" stopColor="#202024" />
+          </radialGradient>
+          <filter id="rbShadow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="2.4" /></filter>
         </defs>
 
         {/* island base */}
@@ -196,11 +214,27 @@ export default function Board({ view, mode }: { view: GameView; mode: PickMode }
           const x = h.x * S + 27, y = h.y * S + 2;
           const dropping = drop?.hex === view.robber;
           return (
-            <g key={dropping ? drop!.key : 'still'} filter="url(#sh)" className={dropping ? 'robber-drop' : ''}>
-              <ellipse cx={x} cy={y + 17} rx={13} ry={5} fill="#1d1d1d" />
-              <path d={`M${x - 12},${y + 17} Q${x - 13},${y - 3} ${x},${y - 6} Q${x + 13},${y - 3} ${x + 12},${y + 17} Z`}
-                fill="#2b2b2b" stroke="#f3e2b8" strokeWidth={1.2} />
-              <circle cx={x} cy={y - 13} r={9} fill="#2b2b2b" stroke="#f3e2b8" strokeWidth={1.2} />
+            <g key={dropping ? drop!.key : 'still'} className={dropping ? 'robber-drop' : ''}>
+              {/* soft cast shadow on the tile, thrown down and to the right */}
+              <ellipse cx={x + 6} cy={y + 20} rx={17} ry={5.5} fill="#000" opacity={.45} filter="url(#rbShadow)" />
+              {/* round plinth: side band, then top face */}
+              <path d={`M${x - 13},${y + 15} L${x - 13},${y + 18} A13 4.6 0 0 0 ${x + 13},${y + 18} L${x + 13},${y + 15} Z`} fill="url(#rbBase)" />
+              <ellipse cx={x} cy={y + 15} rx={13} ry={4.6} fill="url(#rbBaseTop)" />
+              {/* cloaked body, flaring to the plinth */}
+              <path d={`M${x - 10.5},${y + 15} C${x - 11},${y + 4} ${x - 7},${y - 2} ${x - 4},${y - 5} L${x + 4},${y - 5} C${x + 7},${y - 2} ${x + 11},${y + 4} ${x + 10.5},${y + 15} A10.5 3.6 0 0 1 ${x - 10.5},${y + 15} Z`}
+                fill="url(#rbBody)" />
+              <path d={`M${x - 10.5},${y + 15} C${x - 11},${y + 4} ${x - 7},${y - 2} ${x - 4},${y - 5} L${x + 4},${y - 5} C${x + 7},${y - 2} ${x + 11},${y + 4} ${x + 10.5},${y + 15} A10.5 3.6 0 0 1 ${x - 10.5},${y + 15} Z`}
+                fill="url(#rbFold)" />
+              {/* cloak folds catching the light */}
+              <path d={`M${x - 3},${y - 3} C${x - 5},${y + 4} ${x - 6},${y + 9} ${x - 6.5},${y + 16}`} stroke="#8d8d96" strokeOpacity={.45} strokeWidth={1} fill="none" />
+              <path d={`M${x + 1.5},${y - 3} C${x + 2},${y + 5} ${x + 3},${y + 10} ${x + 3.5},${y + 17}`} stroke="#000" strokeOpacity={.5} strokeWidth={1.1} fill="none" />
+              {/* collar */}
+              <ellipse cx={x} cy={y - 5} rx={5.6} ry={2} fill="#3a3a41" />
+              {/* head with a glossy highlight */}
+              <circle cx={x} cy={y - 12.5} r={7.6} fill="url(#rbHead)" />
+              <ellipse cx={x - 2.6} cy={y - 15.3} rx={2.6} ry={1.7} fill="#fff" opacity={.55} transform={`rotate(-30 ${x - 2.6} ${y - 15.3})`} />
+              {/* thin light rim so it reads on dark tiles */}
+              <circle cx={x} cy={y - 12.5} r={7.6} fill="none" stroke="#f3e2b8" strokeOpacity={.55} strokeWidth={.8} />
             </g>
           );
         })()}
