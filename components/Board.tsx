@@ -169,6 +169,34 @@ export default function Board({ view, mode }: { view: GameView; mode: PickMode }
         {/* the tile under the robber is dimmed so the blocked tile is obvious */}
         <polygon points={pts(HEXES[view.robber].vertices)} fill="rgba(15,10,30,.38)" pointerEvents="none" />
 
+        {/* robber */}
+        {(() => {
+          const h = HEXES[view.robber];
+          const x = h.x * S + 29, y = h.y * S + 2;
+          const dropping = drop?.hex === view.robber;
+          return (
+            <g key={dropping ? drop!.key : 'still'} className={dropping ? 'robber-drop' : ''}>
+              {/* soft cast shadow, then the knight figure (cut-out painting) standing on the tile */}
+              <ellipse cx={x + 5} cy={y + 30} rx={19} ry={6} fill="#000" opacity={.55} filter="url(#rbShadow)" />
+              {/* a warm glow around the figure keeps it readable on dark and red tiles */}
+              <image href="/robber.webp" x={x - 23} y={y + 32 - 76} width={46} height={76} preserveAspectRatio="xMidYMax meet"
+                style={{ filter: 'drop-shadow(0 0 1.2px #fff6dc) drop-shadow(0 0 3px rgba(255,236,180,.85)) drop-shadow(0 2px 3px rgba(0,0,0,.6))' }} />
+              {(() => {
+                const hx = view.hexes[view.robber];
+                if (!hx.number) return null;
+                const cx = h.x * S, cy = h.y * S, hot = hx.number === 6 || hx.number === 8;
+                return (
+                  <g filter="url(#sh)">
+                    <circle cx={cx} cy={cy + 6} r={17} fill="#fbf4e2" stroke="#c9a347" strokeWidth={1.5} />
+                    <text x={cx} y={cy + 11} textAnchor="middle" fontSize={hot ? 18 : 16} fontWeight={800}
+                      fill={hot ? '#c0392b' : '#2a1d10'} fontFamily="Secular One, sans-serif">{hx.number}</text>
+                  </g>
+                );
+              })()}
+            </g>
+          );
+        })()}
+
         {/* roads */}
         {Object.entries(view.roads).map(([eid, owner]) => {
           const e = EDGES[+eid], a = VERTICES[e.a], b = VERTICES[e.b];
@@ -193,34 +221,6 @@ export default function Board({ view, mode }: { view: GameView; mode: PickMode }
           return <path key={`v${vid}`} d={d} fill={colorOf[b.owner]} stroke="#2a1d10" strokeWidth={1.8} strokeLinejoin="round" filter="url(#sh)"
             transform={`translate(${x} ${y}) scale(1.35) translate(${-x} ${-y})`} />;
         })}
-
-        {/* robber */}
-        {(() => {
-          const h = HEXES[view.robber];
-          const x = h.x * S + 31, y = h.y * S + 8;
-          const dropping = drop?.hex === view.robber;
-          return (
-            <g key={dropping ? drop!.key : 'still'} className={dropping ? 'robber-drop' : ''}>
-              {/* soft cast shadow, then the knight figure (cut-out painting) standing on the tile */}
-              <ellipse cx={x + 5} cy={y + 30} rx={19} ry={6} fill="#000" opacity={.55} filter="url(#rbShadow)" />
-              {/* a warm glow around the figure keeps it readable on dark and red tiles */}
-              <image href="/robber.webp" x={x - 23} y={y + 32 - 76} width={46} height={76} preserveAspectRatio="xMidYMax meet"
-                style={{ filter: 'drop-shadow(0 0 1.2px #fff6dc) drop-shadow(0 0 3px rgba(255,236,180,.85)) drop-shadow(0 2px 3px rgba(0,0,0,.6))' }} />
-              {(() => {
-                const hx = view.hexes[view.robber];
-                if (!hx.number) return null;
-                const cx = h.x * S, cy = h.y * S, hot = hx.number === 6 || hx.number === 8;
-                return (
-                  <g filter="url(#sh)">
-                    <circle cx={cx} cy={cy + 6} r={17} fill="#fbf4e2" stroke="#c9a347" strokeWidth={1.5} />
-                    <text x={cx} y={cy + 11} textAnchor="middle" fontSize={hot ? 18 : 16} fontWeight={800}
-                      fill={hot ? '#c0392b' : '#2a1d10'} fontFamily="Secular One, sans-serif">{hx.number}</text>
-                  </g>
-                );
-              })()}
-            </g>
-          );
-        })()}
 
         {drop && (
           <g key={`hit${drop.key}`} pointerEvents="none">
