@@ -1,8 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import Board, { RES_ICON, type PickMode } from './Board';
-import { ChatPanel, useChat, usePresence, useVoice } from './Social';
-import { awayFor } from '@/lib/engine/presence';
+import { ChatPanel, useChat, useVoice } from './Social';
 import { playRobber, playYourTurn, setSoundOn, soundOn } from '@/lib/sounds';
 import {
   affordable, piecesLeft, robbableOn, tradeRatios, validCities, validRoads, validSettlements,
@@ -15,7 +14,7 @@ import {
 } from '@/lib/engine/types';
 
 type Act = (a: Action, quiet?: boolean) => Promise<boolean>;
-type Sheet = null | 'build' | 'trade' | 'dev' | 'log' | 'end' | 'emoji' | 'chat' | 'voice' | 'skip';
+type Sheet = null | 'build' | 'trade' | 'dev' | 'log' | 'end' | 'emoji' | 'chat' | 'voice';
 const EMOJIS = ['👍', '😂', '😡', '😱', '🔥', '🖕🏻', '🤝', '😈', '🙏', '🐑', '🧱', '😴'];
 
 /** How long the game has been going (h:mm:ss or m:ss). Older rooms fall back to the "game started" log line. */
@@ -199,15 +198,6 @@ export default function Game({ view, act, skew, react, roomId, token }: {
     prevSub.current = view.sub;
   }, [view.sub]);
 
-  // Who has the game open, and skipping a player who stopped moving.
-  const seen = usePresence(roomId, token, me?.id ?? null);
-  const lastMove = view.lastMoveAt ?? view.log[view.log.length - 1]?.t;
-  const away = (pid: string) => (seen ? awayFor(seen[pid], now, lastMove) : 0);
-  const waitingOn = view.phase !== 'playing' ? [] : view.sub === 'discard' ? Object.keys(view.discards) : [curP.id];
-  const goneMs = Math.max(0, ...waitingOn.map(away));
-  // Only someone who left the game (switched app, locked the phone, closed it) can be skipped.
-  const canSkip = !!me && !waitingOn.includes(me.id) && goneMs >= 60_000;
-  const goneNames = waitingOn.filter(pid => away(pid) >= 60_000).map(pid => view.players.find(p => p.id === pid)?.name).join(' ו');
   const vs = voice.state;
 
   // Big "your turn" banner each time the turn comes to you.
@@ -264,8 +254,7 @@ export default function Game({ view, act, skew, react, roomId, token }: {
       <div className="topbar">
         {view.players.map((p, i) => (
           <PlayerChip key={p.id} p={p} view={view} turn={i === view.current}
-            inCall={vs.members.includes(p.id)} talking={vs.speaking.includes(p.id)}
-            offline={away(p.id) > 0} />
+            inCall={vs.members.includes(p.id)} talking={vs.speaking.includes(p.id)} />
         ))}
       </div>
 
@@ -306,12 +295,6 @@ export default function Game({ view, act, skew, react, roomId, token }: {
         )}
         <button className="btn ghost small" onClick={() => setSheet('log')} aria-label="יומן">📜</button>
       </div>
-      {canSkip && (
-        <div className="skipbar">
-          <span>{goneNames} יצא מהמשחק לפני {Math.floor(goneMs / 60_000)} דק׳</span>
-          <button className="btn small" onClick={() => setSheet('skip')}>דלג על התור</button>
-        </div>
-      )}
 
       <div className="board-area">
         <Board view={view} mode={mode} />
@@ -373,15 +356,6 @@ export default function Game({ view, act, skew, react, roomId, token }: {
           </SheetFrame>
         );
       })()}
-      {sheet === 'skip' && canSkip && (
-        <SheetFrame title={`לדלג על ${goneNames}?`} close={() => setSheet(null)}>
-          <p style={{ marginTop: 0 }}>המשחק ישלים בשבילו את מה שנשאר בתור (באקראי) ויעביר לשחקן הבא. אם הוא חוזר, הוא ממשיך לשחק כרגיל בתור הבא שלו.</p>
-          <div className="row" style={{ gap: 8 }}>
-            <button className="btn grow" onClick={() => { setSheet(null); act({ type: 'skipTurn' }); }}>כן, דלג</button>
-            <button className="btn light grow" onClick={() => setSheet(null)}>חכה עוד</button>
-          </div>
-        </SheetFrame>
-      )}
       {sheet === 'chat' && (
         <ChatPanel roomId={roomId} token={token} meId={me?.id ?? null} messages={chat.messages} add={chat.add}
           close={() => { setSheet(null); setUnread(0); }} />
@@ -554,9 +528,9 @@ function DiceShow({ d }: { d: [number, number] }) {
   );
 }
 
-function PlayerChip({ p, view, turn, inCall, talking, offline }: { p: PublicPlayer; view: GameView; turn: boolean; inCall: boolean; talking: boolean; offline: boolean }) {
+function PlayerChip({ p, view, turn, inCall, talking }: { p: PublicPlayer; view: GameView; turn: boolean; inCall: boolean; talking: boolean }) {
   return (
-    <div data-pid={p.id} className={`pchip ${turn ? 'turn' : ''} ${talking ? 'talking' : ''} ${offline ? 'offline' : ''}`} title={offline ? 'לא מחובר' : ''}>
+    <div data-pid={p.id} className={`pchip ${turn ? 'turn' : ''} ${talking ? 'talking' : ''}`}>
       <span className={`dot c-${p.color}`} />
       <span>{p.name}{p.id === view.you ? ' (אתה)' : ''}{inCall ? ' 🎧' : ''}</span>
       <span className="vp">{p.publicVp}</span>

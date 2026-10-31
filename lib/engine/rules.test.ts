@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { TOKEN_ORDER, generateBoard, spiralOrder } from './board';
-import { awayFor } from './presence';
 import { COAST, EDGES, HEXES, VERTICES } from './geometry';
 import { canBuildRoad, longestRoadLength, validSetupRoads, validSetupSettlements } from './queries';
 import { applyAction, createGame, joinGame, viewFor, totalVp } from './rules';
@@ -212,27 +211,6 @@ describe('turn flow', () => {
     applyAction(s, me.id, { type: 'showStolen' }, 0);
     expect(viewFor(s, other.id, 0).stolen!.res).toBe('ore');
     expect(s.log[s.log.length - 1].text).toContain('אבן');
-  });
-
-  it('only a player who has been out of the game for a minute can be skipped', () => {
-    const s = setupGame(3);
-    playSetup(s);
-    s.turnNo = 10; s.sub = 'main';
-    const [stuck, other] = s.players;
-    // still in the game (thinking), however long: no skip
-    expect(() => applyAction(s, other.id, { type: 'skipTurn', awayMs: 0 }, 0)).toThrow(GameError);
-    expect(() => applyAction(s, other.id, { type: 'skipTurn', awayMs: 59_000 }, 0)).toThrow(GameError);
-    expect(() => applyAction(s, stuck.id, { type: 'skipTurn', awayMs: 90_000 }, 0)).toThrow(GameError);
-    applyAction(s, other.id, { type: 'skipTurn', awayMs: 61_000 }, 5);
-    expect(s.current).toBe(1);
-    expect(s.sub).toBe('roll');
-  });
-
-  it('counts a player as away after switching apps, or when the heartbeat stops', () => {
-    expect(awayFor({ seenAt: 1000, awaySince: null }, 30_000)).toBe(0);
-    expect(awayFor({ seenAt: 1000, awaySince: 1000 }, 61_000)).toBe(60_000);
-    expect(awayFor({ seenAt: 1000, awaySince: null }, 100_000)).toBe(99_000);
-    expect(awayFor(undefined, 100_000)).toBe(0);
   });
 
   it('rolling a 7 forces discards then robber', () => {

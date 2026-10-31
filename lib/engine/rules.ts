@@ -15,14 +15,6 @@ export const MIN_PLAYERS = 2;
 export const WIN_VP = 10;
 /** House rule: a 7 in the first rounds is rolled again; the robber only wakes up afterwards. */
 export const SAFE_ROUNDS = 3;
-/** The others may skip a player who has been out of the game (not just thinking) for this long. */
-export const SKIP_AFTER_MS = 60_000;
-
-/** Players the game is waiting for right now. */
-export function blockers(s: GameState): string[] {
-  if (s.phase !== 'playing') return [];
-  return s.sub === 'discard' ? Object.keys(s.discards) : [s.players[s.current].id];
-}
 const LOG_KEEP = 60;
 
 const randId = (rng: Rng, n = 10) => {
@@ -112,7 +104,6 @@ function validResMap(m: unknown): m is ResMap {
 
 function setDeadline(s: GameState, now: number) {
   s.deadline = s.turnSeconds ? now + s.turnSeconds * 1000 : null;
-  s.lastMoveAt = now;
 }
 
 export function totalVp(s: GameState, pid: string) {
@@ -231,10 +222,8 @@ function requireTurn(s: GameState, pid: string, ...subs: GameState['sub'][]) {
 /** Applies an action in place. Throws GameError when illegal. */
 export function applyAction(s: GameState, pid: string, a: Action, now: number, rng: Rng = Math.random): void {
   const before = s.log[s.log.length - 1]?.id ?? 0;
-  const mover = s.phase === 'playing' ? s.players[s.current]?.id : null;
   try {
     reduce(s, pid, a, now, rng);
-    if (pid === mover && a.type !== 'timeout') s.lastMoveAt = now;
   } finally {
     // Messages a move produced carry who made it, so others can be shown what happened.
     // A timeout is played for whoever's clock ran out, not by the player who reported it.
@@ -495,15 +484,6 @@ function reduce(s: GameState, pid: string, a: Action, now: number, rng: Rng): vo
     case 'endTurn': {
       requireTurn(s, pid, 'main', 'roadBuilding');
       startTurn(s, (s.current + 1) % s.players.length, now);
-      return;
-    }
-    case 'skipTurn': {
-      if (s.phase !== 'playing') throw new GameError('המשחק לא פעיל');
-      if (blockers(s).includes(pid)) throw new GameError('מחכים לך, אי אפשר לדלג על עצמך');
-      // awayMs is filled in by the server from the presence table, never taken from the client.
-      if ((a.awayMs ?? 0) < SKIP_AFTER_MS) throw new GameError('השחקן עדיין במשחק, אי אפשר לדלג עליו');
-      log(s, `${player(s, pid).name} דילג על ${blockers(s).map(id => player(s, id).name).join(' ו')} (לא היה במשחק)`);
-      resolveTimeout(s, now, rng, true);
       return;
     }
     case 'timeout': {

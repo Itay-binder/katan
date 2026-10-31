@@ -57,35 +57,6 @@ async function broadcast(id: string, event: string, payload: unknown): Promise<v
 /** Tells every open screen in the room to refetch. Hands are never sent here, only the version. */
 export const notifyRoom = (id: string, version: number) => broadcast(id, 'update', { version });
 
-import type { Seen } from './engine/presence';
-const memSeen = ((g as unknown as { __katanSeen?: Map<string, Record<string, Seen>> }).__katanSeen ||= new Map());
-
-export async function listPresence(roomId: string): Promise<Record<string, Seen>> {
-  if (!usingSupabase) return memSeen.get(roomId) ?? {};
-  const { data, error } = await db().from('katan_presence').select('player_id, seen_at, away_since').eq('room_id', roomId);
-  if (error) throw error;
-  const out: Record<string, Seen> = {};
-  for (const r of data as { player_id: string; seen_at: string; away_since: string | null }[])
-    out[r.player_id] = { seenAt: Date.parse(r.seen_at), awaySince: r.away_since ? Date.parse(r.away_since) : null };
-  return out;
-}
-
-/** Records a heartbeat ('here') or leaving the game ('away'); tells the room when that changes. */
-export async function markPresence(roomId: string, pid: string, away: boolean): Promise<void> {
-  const now = Date.now();
-  const before = (await listPresence(roomId))[pid];
-  const next: Seen = { seenAt: now, awaySince: away ? (before?.awaySince ?? now) : null };
-  if (!usingSupabase) memSeen.set(roomId, { ...(memSeen.get(roomId) ?? {}), [pid]: next });
-  else {
-    const { error } = await db().from('katan_presence').upsert({
-      room_id: roomId, player_id: pid, seen_at: new Date(next.seenAt).toISOString(),
-      away_since: next.awaySince ? new Date(next.awaySince).toISOString() : null,
-    });
-    if (error) throw error;
-  }
-  if (!before || !!before.awaySince !== away) await broadcast(roomId, 'presence', { pid, away });
-}
-
 export interface ChatMsg { id: number; player_id: string; name: string; color: string; text: string; created_at: string }
 const memChat = ((g as unknown as { __katanChat?: Map<string, ChatMsg[]> }).__katanChat ||= new Map());
 

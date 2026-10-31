@@ -1,7 +1,6 @@
 'use client';
 import { createClient, type RealtimeChannel, type SupabaseClient } from '@supabase/supabase-js';
 import type { Action, GameView } from './engine/types';
-import type { Seen } from './engine/presence';
 
 const tokenKey = (id: string) => `katan:${id}`;
 export function getToken(id: string): string | null {
@@ -53,7 +52,7 @@ export interface ChatMsg { id: number; player_id: string; name: string; color: s
 
 // One realtime channel per room. The server pushes 'update' and 'chat'; players push 'emoji' and 'voice'
 // (voice call signalling) straight to each other. Components listen through `onRoomEvent`.
-const EVENTS = ['update', 'emoji', 'chat', 'voice', 'presence'] as const;
+const EVENTS = ['update', 'emoji', 'chat', 'voice'] as const;
 export type RoomEvent = (typeof EVENTS)[number];
 const channels = new Map<string, RealtimeChannel>();
 const bus = typeof window !== 'undefined' ? new EventTarget() : null;
@@ -80,17 +79,6 @@ export function subscribeRoom(id: string, onUpdate: () => void): () => void {
 export function sendRoomEvent(id: string, event: 'emoji' | 'voice', payload: unknown) {
   channels.get(id)?.send({ type: 'broadcast', event, payload });
 }
-
-export const presenceApi = {
-  list: (id: string) => call<{ presence: Record<string, Seen>; now: number }>(`/api/rooms/${id}/presence`),
-  /** keepalive lets the 'away' report get out even while the phone is switching apps. */
-  mark: (id: string, token: string | null, away: boolean) =>
-    fetch(`/api/rooms/${id}/presence`, {
-      method: 'POST', keepalive: true, cache: 'no-store',
-      headers: { 'Content-Type': 'application/json', ...(token ? { 'x-token': token } : {}) },
-      body: JSON.stringify({ away }),
-    }).catch(() => {}),
-};
 
 export const chatApi = {
   list: (id: string) => call<{ messages: ChatMsg[] }>(`/api/rooms/${id}/chat`),

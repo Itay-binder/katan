@@ -60,8 +60,6 @@ export interface GameState {
   afterRobber: Sub;
   discards: Record<string, number>;
   stealFrom: string[];
-  /** When the player whose move it is last did something (or their turn began). */
-  lastMoveAt?: number;
   /** Game clock: when play started and when someone won. */
   startedAt?: number;
   endedAt?: number;
@@ -88,7 +86,6 @@ export type Action =
   | { type: 'moveRobber'; hex: number }
   | { type: 'steal'; target: string; pick?: number }
   | { type: 'showStolen' }
-  | { type: 'skipTurn'; awayMs?: number }
   | { type: 'buildRoad'; edge: number }
   | { type: 'buildSettlement'; vertex: number }
   | { type: 'buildCity'; vertex: number }
