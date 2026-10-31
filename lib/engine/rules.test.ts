@@ -197,20 +197,22 @@ describe('turn flow', () => {
     expect(() => applyAction(s, me.id, { type: 'buildRoad', edge: ok }, 0)).toThrow(GameError);
   });
 
-  it('dev cards cannot be played the turn they were bought', () => {
+  it('a knight waits a turn, progress cards can be played right away, one dev card per turn', () => {
     const s = setupGame(2);
     playSetup(s);
     const me = s.players[0];
     s.sub = 'main';
-    me.resources = { ...emptyRes(), wool: 1, grain: 1, ore: 1 };
-    s.devDeck.push('monopoly');
+    me.resources = { ...emptyRes(), wool: 2, grain: 2, ore: 2 };
+    s.devDeck.push('knight', 'monopoly'); // monopoly is drawn first
     applyAction(s, me.id, { type: 'buyDev' }, 0);
-    expect(() => applyAction(s, me.id, { type: 'playDev', card: 'monopoly', res: ['ore'] }, 0)).toThrow(GameError);
-    me.dev[0].boughtTurn = s.turnNo - 1;
+    applyAction(s, me.id, { type: 'buyDev' }, 0);
+    expect(() => applyAction(s, me.id, { type: 'playDev', card: 'knight' }, 0)).toThrow(GameError);
     s.players[1].resources.ore = 3;
     applyAction(s, me.id, { type: 'playDev', card: 'monopoly', res: ['ore'] }, 0);
     expect(me.resources.ore).toBe(3);
     expect(s.players[1].resources.ore).toBe(0);
+    me.dev[0].boughtTurn = s.turnNo - 1; // the knight, as if bought last turn
+    expect(() => applyAction(s, me.id, { type: 'playDev', card: 'knight' }, 0)).toThrow(GameError); // already played one
   });
 
   it('player trade: offer, accept, confirm', () => {

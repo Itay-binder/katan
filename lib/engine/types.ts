@@ -8,6 +8,8 @@ export type Color = (typeof COLORS)[number];
 
 export type DevType = 'knight' | 'vp' | 'roadBuilding' | 'yearOfPlenty' | 'monopoly';
 export interface DevCard { type: DevType; boughtTurn: number }
+/** House rule: only a knight has to wait a turn; progress cards can be played the turn they were bought. */
+export const devReady = (d: DevCard, turnNo: number) => d.type !== 'knight' || d.boughtTurn < turnNo;
 
 export interface Player {
   id: string;

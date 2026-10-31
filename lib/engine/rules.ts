@@ -6,7 +6,7 @@ import {
   validSetupSettlements,
 } from './queries';
 import {
-  COLORS, COST, DEV_HE, GameError, RES, RES_HE, emptyRes, resTotal,
+  COLORS, COST, DEV_HE, GameError, RES, RES_HE, devReady, emptyRes, resTotal,
   type Action, type Color, type DevType, type GameState, type GameView, type Player, type Res, type ResMap,
 } from './types';
 
@@ -379,7 +379,7 @@ function reduce(s: GameState, pid: string, a: Action, now: number, rng: Rng): vo
       requireTurn(s, pid, ...allowed);
       if (s.devPlayed) throw new GameError('כבר שיחקת קלף פיתוח בתור הזה');
       const p = cur(s);
-      const idx = p.dev.findIndex(d => d.type === a.card && d.boughtTurn < s.turnNo);
+      const idx = p.dev.findIndex(d => d.type === a.card && devReady(d, s.turnNo));
       if (idx < 0) throw new GameError('אין לך קלף כזה שאפשר לשחק עכשיו');
       if (a.card === 'yearOfPlenty') {
         const rs = a.res || [];

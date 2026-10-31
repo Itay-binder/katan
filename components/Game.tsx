@@ -7,7 +7,7 @@ import {
 } from '@/lib/engine/queries';
 import { HEXES } from '@/lib/engine/geometry';
 import {
-  COST, DEV_HE, RES, RES_HE, emptyRes, resTotal,
+  COST, DEV_HE, RES, RES_HE, devReady, emptyRes, resTotal,
   type Action, type DevType, type GameView, type PublicPlayer, type Res, type ResMap,
 } from '@/lib/engine/types';
 
@@ -417,7 +417,7 @@ function DevSheet({ view, meId, myTurn, act, close }: { view: GameView; meId: st
   };
   const canPlay = (t: DevType) => {
     if (t === 'vp' || !myTurn || view.devPlayed) return false;
-    if (!cards.some(c => c.type === t && c.boughtTurn < view.turnNo)) return false;
+    if (!cards.some(c => c.type === t && devReady(c, view.turnNo))) return false;
     return t === 'knight' ? view.sub === 'roll' || view.sub === 'main' : view.sub === 'main';
   };
   const play = (t: DevType) => {
@@ -450,7 +450,7 @@ function DevSheet({ view, meId, myTurn, act, close }: { view: GameView; meId: st
       <div className="list">
         {types.filter(t => cards.some(c => c.type === t)).map(t => {
           const n = cards.filter(c => c.type === t).length;
-          const fresh = cards.filter(c => c.type === t && c.boughtTurn >= view.turnNo).length;
+          const fresh = cards.filter(c => c.type === t && !devReady(c, view.turnNo)).length;
           return (
             <div className="opt" key={t}>
               <div className="grow">
