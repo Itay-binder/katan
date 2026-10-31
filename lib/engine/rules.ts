@@ -13,6 +13,8 @@ import {
 export const MAX_PLAYERS = 4;
 export const MIN_PLAYERS = 2;
 export const WIN_VP = 10;
+/** House rule: a 7 in the first rounds is rolled again; the robber only wakes up afterwards. */
+export const SAFE_ROUNDS = 3;
 const LOG_KEEP = 60;
 
 const randId = (rng: Rng, n = 10) => {
@@ -259,6 +261,10 @@ export function applyAction(s: GameState, pid: string, a: Action, now: number, r
       s.dice = d;
       const sum = d[0] + d[1];
       log(s, `${cur(s).name} הטיל ${sum}`);
+      if (sum === 7 && s.turnNo <= SAFE_ROUNDS * s.players.length) {
+        log(s, `בשלושת הסבבים הראשונים 7 לא נחשב, מטילים שוב`);
+        return;
+      }
       if (sum === 7) {
         s.discards = {};
         for (const p of s.players) {

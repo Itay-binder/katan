@@ -117,9 +117,29 @@ describe('setup phase', () => {
 });
 
 describe('turn flow', () => {
+  it('a 7 in the first three rounds is rolled again, the robber stays put', () => {
+    const s = setupGame(3);
+    playSetup(s);
+    const robber = s.robber;
+    let i = 0;
+    const seven = () => [0.4, 0.6][i++ % 2];
+    applyAction(s, s.players[0].id, { type: 'roll' }, 0, seven);
+    expect(s.dice![0] + s.dice![1]).toBe(7);
+    expect(s.sub).toBe('roll');
+    expect(s.current).toBe(0);
+    expect(s.robber).toBe(robber);
+    s.turnNo = 9; // last turn of round three
+    applyAction(s, s.players[0].id, { type: 'roll' }, 0, seven);
+    expect(s.sub).toBe('roll');
+    s.turnNo = 10; // round four: the 7 counts
+    applyAction(s, s.players[0].id, { type: 'roll' }, 0, seven);
+    expect(['robber', 'discard']).toContain(s.sub);
+  });
+
   it('rolling a 7 forces discards then robber', () => {
     const s = setupGame(3);
     playSetup(s);
+    s.turnNo = 10; // past the protected opening rounds
     const victim = s.players[1];
     victim.resources = { brick: 3, lumber: 3, wool: 3, grain: 0, ore: 0 };
     let i = 0;

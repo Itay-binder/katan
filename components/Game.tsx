@@ -129,7 +129,7 @@ function statusText(v: GameView, me: PublicPlayer | null, myTurn: boolean, build
     switch (v.sub) {
       case 'setupSettlement': return 'בחר מקום ליישוב (הנקודות הצהובות)';
       case 'setupRoad': return 'בחר דרך שיוצאת מהיישוב';
-      case 'roll': return 'התור שלך: הטל קוביות';
+      case 'roll': return v.dice && v.dice[0] + v.dice[1] === 7 ? 'יצא 7 בסבבים הראשונים: הטל שוב' : 'התור שלך: הטל קוביות';
       case 'discard': return 'מחכים שכולם יזרקו קלפים…';
       case 'robber': return 'הזז את השודד: בחר משבצת';
       case 'steal': return 'בחר ממי לגנוב';
@@ -145,7 +145,7 @@ function statusText(v: GameView, me: PublicPlayer | null, myTurn: boolean, build
   switch (v.sub) {
     case 'setupSettlement': return `${n} בוחר מקום ליישוב`;
     case 'setupRoad': return `${n} בוחר דרך`;
-    case 'roll': return `${n} מטיל קוביות`;
+    case 'roll': return v.dice && v.dice[0] + v.dice[1] === 7 ? `יצא 7, ${n} מטיל שוב` : `${n} מטיל קוביות`;
     case 'discard': return 'מחכים שכולם יזרקו קלפים…';
     case 'robber': return `${n} מזיז את השודד`;
     case 'steal': return `${n} בוחר ממי לגנוב`;
