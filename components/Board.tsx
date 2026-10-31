@@ -190,13 +190,14 @@ export default function Board({ view, mode }: { view: GameView; mode: PickMode }
         {/* robber */}
         {(() => {
           const h = HEXES[view.robber];
-          const x = h.x * S + 22, y = h.y * S + 2;
+          const x = h.x * S + 27, y = h.y * S + 2;
           const dropping = drop?.hex === view.robber;
           return (
             <g key={dropping ? drop!.key : 'still'} filter="url(#sh)" className={dropping ? 'robber-drop' : ''}>
-              <ellipse cx={x} cy={y + 12} rx={9} ry={4} fill="#1d1d1d" />
-              <path d={`M${x - 8},${y + 12} Q${x - 9},${y - 2} ${x},${y - 4} Q${x + 9},${y - 2} ${x + 8},${y + 12} Z`} fill="#2b2b2b" />
-              <circle cx={x} cy={y - 8} r={6} fill="#2b2b2b" />
+              <ellipse cx={x} cy={y + 17} rx={13} ry={5} fill="#1d1d1d" />
+              <path d={`M${x - 12},${y + 17} Q${x - 13},${y - 3} ${x},${y - 6} Q${x + 13},${y - 3} ${x + 12},${y + 17} Z`}
+                fill="#2b2b2b" stroke="#f3e2b8" strokeWidth={1.2} />
+              <circle cx={x} cy={y - 13} r={9} fill="#2b2b2b" stroke="#f3e2b8" strokeWidth={1.2} />
             </g>
           );
         })()}
@@ -204,7 +205,7 @@ export default function Board({ view, mode }: { view: GameView; mode: PickMode }
         {drop && (
           <g key={`hit${drop.key}`} pointerEvents="none">
             <polygon points={pts(HEXES[drop.hex].vertices)} className={drop.mine ? 'robber-hit mine' : 'robber-hit'} />
-            <circle cx={HEXES[drop.hex].x * S + 22} cy={HEXES[drop.hex].y * S + 14} r={10} className="robber-dust" />
+            <circle cx={HEXES[drop.hex].x * S + 27} cy={HEXES[drop.hex].y * S + 19} r={14} className="robber-dust" />
           </g>
         )}
 

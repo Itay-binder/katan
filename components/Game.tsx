@@ -87,7 +87,7 @@ export default function Game({ view, act, skew, react, roomId, token }: {
       if (gain <= 0 || !slot) continue;
       for (let i = 0; i < Math.min(gain, 5); i++) {
         out.push({
-          key: Math.random(), res: k, delay: out.length * 110,
+          key: Math.random(), res: k, delay: out.length * 140,
           sx: board.left + board.width / 2 + (Math.random() - .5) * board.width * .45,
           sy: board.top + board.height / 2 + (Math.random() - .5) * board.height * .3,
           ex: slot.left + slot.width / 2, ey: slot.top + slot.height / 2,
@@ -95,9 +95,12 @@ export default function Game({ view, act, skew, react, roomId, token }: {
       }
     }
     if (!out.length) return;
+    // Big cards line up across the middle of the screen, then drop into the hand.
+    const step = Math.min(118, (window.innerWidth - 40) / out.length);
+    out.forEach((o, i) => { o.sx = window.innerWidth / 2 + (i - (out.length - 1) / 2) * step; o.sy = board.top + board.height * .45; });
     setFlyers(f => [...f, ...out]);
     const done = new Set(out.map(o => o.key));
-    setTimeout(() => setFlyers(f => f.filter(o => !done.has(o.key))), 1000 + out.length * 110);
+    setTimeout(() => setFlyers(f => f.filter(o => !done.has(o.key))), 1500 + out.length * 140);
   }, [me?.resources]);
   const [now, setNow] = useState(() => Date.now() + skew);
 

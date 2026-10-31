@@ -303,3 +303,26 @@ button.rc { border: 3px solid transparent; }
 .big-card.r-brick { background-image: url(/cards/brick.webp); } .big-card.r-lumber { background-image: url(/cards/lumber.webp); }
 .big-card.r-wool { background-image: url(/cards/wool.webp); } .big-card.r-grain { background-image: url(/cards/grain.webp); }
 .big-card.r-ore { background-image: url(/cards/ore.webp); }
+
+/* bigger, clearer animations */
+.flycard { width: 104px; height: 160px; margin: -80px 0 0 -52px; border-width: 3px; border-radius: 12px; animation: flybig 1.35s cubic-bezier(.45,.05,.55,1) forwards; }
+@keyframes flybig {
+  0% { transform: translate(0, 30px) scale(.3) rotate(-10deg); opacity: 0; }
+  14% { transform: translate(0, 0) scale(1.08) rotate(2deg); opacity: 1; }
+  22% { transform: scale(1) rotate(0); opacity: 1; }
+  55% { transform: scale(1); opacity: 1; }
+  100% { transform: translate(var(--dx), var(--dy)) scale(.4); opacity: .9; }
+}
+.big-card { width: min(62vw, 250px); height: auto; aspect-ratio: 911 / 1397; border-width: 5px; border-radius: 16px; }
+.robbed-card { width: 120px; height: 184px; margin: -92px 0 0 -60px; border-radius: 12px; }
+.robbed-msg { top: 18%; font-size: 22px; }
+.robber-drop { animation-duration: .85s; }
+@keyframes robberdrop {
+  0% { transform: translateY(-320px) scale(3.4); opacity: 0; }
+  15% { opacity: 1; }
+  70% { transform: translateY(0) scale(1.25, .78); }
+  85% { transform: translateY(-10px) scale(.94, 1.1); }
+  100% { transform: none; }
+}
+.robber-hit { stroke-width: 7; }
+.robber-dust { stroke-width: 4; }
