@@ -496,7 +496,7 @@ function reduce(s: GameState, pid: string, a: Action, now: number, rng: Rng): vo
       if (cur(s).id === pid) throw new GameError('זה התור שלך');
       if (now - (s.lastMoveAt ?? s.log[s.log.length - 1]?.t ?? 0) < SKIP_AFTER_MS) throw new GameError('אפשר לדלג רק אחרי דקה בלי תזוזה');
       log(s, `${player(s, pid).name} דילג על התור של ${cur(s).name}`);
-      resolveTimeout(s, now, rng);
+      resolveTimeout(s, now, rng, true);
       return;
     }
     case 'timeout': {
@@ -510,9 +510,9 @@ function reduce(s: GameState, pid: string, a: Action, now: number, rng: Rng): vo
 }
 
 /** When the turn clock runs out: finish whatever is pending with random legal choices and pass the turn. */
-function resolveTimeout(s: GameState, now: number, rng: Rng) {
+function resolveTimeout(s: GameState, now: number, rng: Rng, quiet = false) {
   const who = cur(s);
-  log(s, `הזמן של ${who.name} נגמר`);
+  if (!quiet) log(s, `הזמן של ${who.name} נגמר`);
   const pick = <T,>(xs: T[]) => xs[Math.floor(rng() * xs.length)];
   const startStep = s.setupStep;
   const startTurnNo = s.turnNo;
