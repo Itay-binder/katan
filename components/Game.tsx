@@ -82,7 +82,7 @@ export default function Game({ view, act, skew, react, roomId, token }: {
     rolledAt.current = Date.now();
     const key = line.id;
     setRoll({ key, d: view.dice });
-    setTimeout(() => setRoll(r => (r?.key === key ? null : r)), 2300);
+    setTimeout(() => setRoll(r => (r?.key === key ? null : r)), 2100);
   }, [view.log, view.dice]);
 
   // New cards fly from the board into the hand.
@@ -116,7 +116,7 @@ export default function Game({ view, act, skew, react, roomId, token }: {
     }
     if (!out.length) return;
     // Big cards line up across the middle of the screen, then drop into the hand (after the dice, if this was a roll).
-    const wait = Date.now() - rolledAt.current < 800 ? 1500 : 0;
+    const wait = Date.now() - rolledAt.current < 800 ? 1800 : 0;
     out.forEach(o => { o.delay += wait; });
     const step = Math.min(118, (window.innerWidth - 40) / out.length);
     out.forEach((o, i) => { o.sx = window.innerWidth / 2 + (i - (out.length - 1) / 2) * step; o.sy = board.top + board.height * .45; });

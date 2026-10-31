@@ -328,7 +328,7 @@ button.rc { border: 3px solid transparent; }
 .robber-dust { stroke-width: 4; }
 
 /* dice roll */
-.dice-show { position: fixed; inset: 0; z-index: 38; pointer-events: none; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; animation: diceout 2.3s ease-in forwards; }
+.dice-show { position: fixed; inset: 0; z-index: 38; pointer-events: none; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; animation: diceout 2.1s ease-in forwards; }
 .dice-row { display: flex; gap: 22px; }
 .die-big { width: 92px; height: 92px; border-radius: 18px; background: #fffaf0; box-shadow: 0 14px 30px rgba(0,0,0,.45), inset 0 -6px 0 #e3d6b8; display: grid; grid-template: repeat(3, 1fr) / repeat(3, 1fr); padding: 14px; gap: 4px; animation: tumble .65s cubic-bezier(.2,.7,.3,1.2) both; }
 .die-big span { border-radius: 50%; }
@@ -342,4 +342,4 @@ button.rc { border: 3px solid transparent; }
 .dice-sum { font-family: 'Secular One', sans-serif; font-size: 64px; line-height: 1; color: #fff; text-shadow: 0 4px 14px rgba(0,0,0,.6); animation: sumpop .35s ease-out .65s both; }
 .dice-sum.seven { color: #ff6b5b; }
 @keyframes sumpop { from { transform: scale(.2); opacity: 0; } 70% { transform: scale(1.2); } to { transform: none; opacity: 1; } }
-@keyframes diceout { 0%, 82% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes diceout { 0%, 78% { opacity: 1; } 100% { opacity: 0; } }
