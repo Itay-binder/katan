@@ -8,7 +8,7 @@ import {
   affordable, piecesLeft, robbableOn, tradeRatios, validCities, validRoads, validSettlements,
   validSetupRoads, validSetupSettlements,
 } from '@/lib/engine/queries';
-import { HEXES } from '@/lib/engine/geometry';
+import { HEXES, VERTICES } from '@/lib/engine/geometry';
 import {
   COST, DEV_HE, RES, RES_HE, devReady, emptyRes, resTotal,
   type Action, type DevType, type GameView, type PublicPlayer, type Res, type ResMap,
@@ -414,6 +414,7 @@ export default function Game({ view, act, skew, react, roomId, token }: {
       )}
 
       {myDiscard > 0 && view.sub === 'discard' && me && <DiscardSheet need={myDiscard} hand={me.resources!} act={act} />}
+      {myTurn && me && view.sub === 'setupPickStart' && <PickStartSheet view={view} meId={me.id} act={act} />}
       {myTurn && view.sub === 'steal' && <StealSheet view={view} act={act} onStolen={() => setReveal(true)} />}
       {reveal && view.stolen?.by === me?.id && view.stolen?.res && (
         <div className="steal-reveal" onClick={() => setReveal(false)}>
@@ -821,6 +822,37 @@ function DiscardSheet({ need, hand, act }: { need: number; hand: ResMap; act: Ac
       <Stepper value={sel} onChange={setSel} max={hand} />
       <button className="btn" style={{ width: '100%' }} disabled={resTotal(sel) !== need}
         onClick={() => act({ type: 'discard', cards: sel })}>זרוק</button>
+    </SheetFrame>
+  );
+}
+
+/** Last player in the opening: two packs of cards, one per settlement; tap the one you want. */
+function PickStartSheet({ view, meId, act }: { view: GameView; meId: string; act: Act }) {
+  const [busy, setBusy] = useState(false);
+  const mine = Object.keys(view.buildings).map(Number).filter(v => view.buildings[v].owner === meId);
+  const packs = mine.map(v => ({
+    v,
+    cards: VERTICES[v].hexes.map(h => view.hexes[h].terrain).filter((t): t is Res => t !== 'desert'),
+    where: VERTICES[v].hexes.map(h => view.hexes[h]).map(x => (x.terrain === 'desert' ? 'מדבר' : `${RES_HE[x.terrain]} ${x.number}`)).join(' · '),
+  }));
+  return (
+    <SheetFrame title="בחר מאיזה יישוב לקבל קלפים">
+      <p style={{ marginTop: 0 }}>בתור האחרון בפתיחה אתה בוחר: הקלפים של איזה יישוב ייכנסו לך ליד?</p>
+      <div className="packs">
+        {packs.map((p, i) => (
+          <button key={p.v} className="pack" disabled={busy} style={{ animationDelay: `${i * 150}ms` }}
+            onClick={() => { setBusy(true); act({ type: 'pickStart', vertex: p.v }).then(ok => { if (!ok) setBusy(false); }); }}>
+            <span className="pack-label">{i === packs.length - 1 ? 'היישוב החדש' : 'היישוב הראשון'}</span>
+            <span className="pack-cards">
+              {p.cards.length ? p.cards.map((r, k) => (
+                <span key={k} className={`pack-card r-${r}`} style={{ animationDelay: `${i * 150 + 250 + k * 120}ms` }} />
+              )) : <span className="pack-empty">אין קלפים</span>}
+            </span>
+            <span className="pack-where">{p.where}</span>
+            <span className="pack-count">{p.cards.length} קלפים · בחר</span>
+          </button>
+        ))}
+      </div>
     </SheetFrame>
   );
 }
