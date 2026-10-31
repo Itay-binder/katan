@@ -220,3 +220,21 @@ h1, h2, h3, .display { font-family: 'Secular One', 'Assistant', sans-serif; font
 .chat-err { color: var(--danger); margin: 4px 0; font-size: 14px; }
 .chat-form { display: flex; gap: 8px; padding-top: 6px; }
 .chat-form input { flex: 1; min-width: 0; font: inherit; font-size: 16px; padding: 10px 12px; border-radius: 12px; border: 2px solid #d8c9a3; background: #fff; }
+
+.steal-fan { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; padding: 6px 0; }
+.card-back { width: 54px; height: 78px; border-radius: 9px; border: 3px solid var(--parchment); background: repeating-linear-gradient(45deg, #0f3b47 0 6px, #14505f 6px 12px); box-shadow: var(--shadow); font-size: 22px; animation: dealin .25s ease-out backwards; }
+.card-back:active { transform: translateY(-6px) scale(1.05); }
+.card-back:disabled { opacity: .6; }
+@keyframes dealin { from { transform: translateY(30px) rotate(-8deg); opacity: 0; } }
+.steal-reveal { position: fixed; inset: 0; z-index: 37; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; background: rgba(10,42,51,.55); animation: fade .15s; }
+.steal-reveal p { color: #fff; font-weight: 800; font-size: 18px; margin: 0; text-shadow: 0 2px 4px rgba(0,0,0,.4); }
+.big-card { width: 120px; height: 168px; border-radius: 16px; border: 5px solid var(--parchment); color: #fff; font-weight: 800; font-size: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 14px 40px rgba(0,0,0,.5); animation: flipin .45s ease-out; }
+.big-card .ico { font-size: 54px; }
+@keyframes flipin { 0% { transform: rotateY(90deg) scale(.6); } 60% { transform: rotateY(-10deg) scale(1.08); } 100% { transform: none; } }
+.flycard { position: fixed; z-index: 38; width: 40px; height: 56px; margin: -28px 0 0 -20px; border-radius: 8px; border: 3px solid var(--parchment); display: grid; place-items: center; font-size: 22px; pointer-events: none; box-shadow: 0 6px 16px rgba(0,0,0,.4); opacity: 0; animation: fly .85s cubic-bezier(.45,.05,.55,1) forwards; }
+@keyframes fly {
+  0% { transform: translate(0, 0) scale(.3); opacity: 0; }
+  22% { transform: translate(0, -18px) scale(1.25); opacity: 1; }
+  40% { transform: translate(0, -18px) scale(1.15); opacity: 1; }
+  100% { transform: translate(var(--dx), var(--dy)) scale(.55); opacity: .9; }
+}

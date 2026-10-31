@@ -190,6 +190,29 @@ describe('turn flow', () => {
     expect(msg.by).toBe(me);
   });
 
+  it('robber: thief picks a face-down card, only thief and victim see it until shown', () => {
+    const s = setupGame(3);
+    playSetup(s);
+    s.turnNo = 10;
+    const [me, vic, other] = s.players;
+    me.resources = emptyRes(); vic.resources = { ...emptyRes(), ore: 2 }; other.resources = emptyRes();
+    const hex = HEXES.find(h => h.id !== s.robber && h.vertices.some(v => s.buildings[v]?.owner === vic.id)
+      && !h.vertices.some(v => s.buildings[v]?.owner === other.id))!.id;
+    s.sub = 'robber'; s.afterRobber = 'main';
+    applyAction(s, me.id, { type: 'moveRobber', hex }, 0);
+    expect(s.sub).toBe('steal'); // one victim still gets the card picker
+    expect(() => applyAction(s, me.id, { type: 'showStolen' }, 0)).toThrow(GameError);
+    applyAction(s, me.id, { type: 'steal', target: vic.id, pick: 1 }, 0);
+    expect(me.resources.ore).toBe(1);
+    expect(s.sub).toBe('main');
+    expect(viewFor(s, me.id, 0).stolen!.res).toBe('ore');
+    expect(viewFor(s, vic.id, 0).stolen!.res).toBe('ore');
+    expect(viewFor(s, other.id, 0).stolen!.res).toBeNull();
+    applyAction(s, me.id, { type: 'showStolen' }, 0);
+    expect(viewFor(s, other.id, 0).stolen!.res).toBe('ore');
+    expect(s.log[s.log.length - 1].text).toContain('ברזל');
+  });
+
   it('rolling a 7 forces discards then robber', () => {
     const s = setupGame(3);
     playSetup(s);

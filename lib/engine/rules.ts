@@ -175,7 +175,7 @@ function distribute(s: GameState, roll: number) {
 
 function startTurn(s: GameState, idx: number, now: number) {
   s.current = idx; s.turnNo++; s.sub = 'roll'; s.dice = null;
-  s.devPlayed = false; s.freeRoads = 0; s.trade = null;
+  s.devPlayed = false; s.freeRoads = 0; s.trade = null; s.stolen = null;
   setDeadline(s, now);
 }
 
@@ -183,16 +183,19 @@ function afterRobberMoved(s: GameState, rng: Rng) {
   const me = cur(s);
   const victims = robbableOn(s, s.robber, me.id).filter(id => resTotal(player(s, id).resources) > 0);
   if (victims.length === 0) { s.sub = s.afterRobber; return; }
-  if (victims.length === 1) { steal(s, victims[0], rng); return; }
+  // Even with one victim the thief picks a face-down card from their hand.
   s.stealFrom = victims; s.sub = 'steal';
 }
 
-function steal(s: GameState, targetId: string, rng: Rng) {
+function steal(s: GameState, targetId: string, rng: Rng, pickAt?: number) {
   const me = cur(s), t = player(s, targetId);
-  const pool = RES.flatMap(k => Array(t.resources[k]).fill(k) as Res[]);
+  // The victim's hand is shuffled face down; the thief points at one of the cards.
+  const pool = shuffle(RES.flatMap(k => Array(t.resources[k]).fill(k) as Res[]), rng);
   if (pool.length) {
-    const r = pool[Math.floor(rng() * pool.length)];
+    const i = Number.isInteger(pickAt) && pickAt! >= 0 && pickAt! < pool.length ? pickAt! : Math.floor(rng() * pool.length);
+    const r = pool[i];
     t.resources[r]--; me.resources[r]++;
+    s.stolen = { by: me.id, from: t.id, res: r, shown: false };
     log(s, `${me.name} גנב קלף מ${t.name}`);
   }
   s.stealFrom = []; s.sub = s.afterRobber;
@@ -332,7 +335,13 @@ function reduce(s: GameState, pid: string, a: Action, now: number, rng: Rng): vo
     case 'steal': {
       requireTurn(s, pid, 'steal');
       if (!s.stealFrom.includes(a.target)) throw new GameError('אי אפשר לגנוב מהשחקן הזה');
-      steal(s, a.target, rng);
+      steal(s, a.target, rng, a.pick);
+      return;
+    }
+    case 'showStolen': {
+      if (s.phase !== 'playing' || !s.stolen || s.stolen.by !== pid || s.stolen.shown) throw new GameError('אין קלף להציג');
+      s.stolen.shown = true;
+      log(s, `${player(s, pid).name} גנב ${RES_HE[s.stolen.res!]} מ${player(s, s.stolen.from).name}`);
       return;
     }
     case 'buildRoad': {
@@ -531,6 +540,7 @@ export function viewFor(s: GameState, you: string | null, now: number): GameView
   const { devDeck, players, ...rest } = s;
   return {
     ...structuredClone(rest),
+    stolen: s.stolen ? { ...s.stolen, res: s.stolen.shown || you === s.stolen.by || you === s.stolen.from ? s.stolen.res : null } : null,
     devDeckCount: devDeck.length,
     you,
     now,

@@ -29,6 +29,42 @@ export default function Game({ view, act, skew, react, roomId, token }: {
   const [build, setBuild] = useState<null | 'road' | 'settlement' | 'city'>(null);
   const [sheet, setSheet] = useState<Sheet>(null);
   const [robberAt, setRobberAt] = useState<number | null>(null);
+  const [reveal, setReveal] = useState(false);
+  useEffect(() => {
+    if (!reveal) return;
+    const t = setTimeout(() => setReveal(false), 1800);
+    return () => clearTimeout(t);
+  }, [reveal]);
+
+  // New cards fly from the board into the hand.
+  const [flyers, setFlyers] = useState<{ key: number; res: Res; sx: number; sy: number; ex: number; ey: number; delay: number }[]>([]);
+  const prevHand = useRef<ResMap | null>(me?.resources ?? null);
+  useEffect(() => {
+    const cur = me?.resources;
+    const prev = prevHand.current;
+    prevHand.current = cur ?? null;
+    if (!cur || !prev) return;
+    const board = document.querySelector('.board-wrap')?.getBoundingClientRect();
+    if (!board) return;
+    const out: typeof flyers = [];
+    for (const k of RES) {
+      const gain = cur[k] - prev[k];
+      const slot = document.querySelector(`.bottom .hand .r-${k}`)?.getBoundingClientRect();
+      if (gain <= 0 || !slot) continue;
+      for (let i = 0; i < Math.min(gain, 5); i++) {
+        out.push({
+          key: Math.random(), res: k, delay: out.length * 110,
+          sx: board.left + board.width / 2 + (Math.random() - .5) * board.width * .45,
+          sy: board.top + board.height / 2 + (Math.random() - .5) * board.height * .3,
+          ex: slot.left + slot.width / 2, ey: slot.top + slot.height / 2,
+        });
+      }
+    }
+    if (!out.length) return;
+    setFlyers(f => [...f, ...out]);
+    const done = new Set(out.map(o => o.key));
+    setTimeout(() => setFlyers(f => f.filter(o => !done.has(o.key))), 1000 + out.length * 110);
+  }, [me?.resources]);
   const [now, setNow] = useState(() => Date.now() + skew);
 
   useEffect(() => {
@@ -233,7 +269,27 @@ export default function Game({ view, act, skew, react, roomId, token }: {
       )}
 
       {myDiscard > 0 && view.sub === 'discard' && me && <DiscardSheet need={myDiscard} hand={me.resources!} act={act} />}
-      {myTurn && view.sub === 'steal' && <StealSheet view={view} act={act} />}
+      {myTurn && view.sub === 'steal' && <StealSheet view={view} act={act} onStolen={() => setReveal(true)} />}
+      {reveal && view.stolen?.by === me?.id && view.stolen?.res && (
+        <div className="steal-reveal" onClick={() => setReveal(false)}>
+          <div className={`big-card r-${view.stolen.res}`}>
+            <div className="ico">{RES_ICON[view.stolen.res]}</div>
+            <div>{RES_HE[view.stolen.res]}</div>
+          </div>
+          <p>גנבת {RES_HE[view.stolen.res]} מ{view.players.find(p => p.id === view.stolen!.from)?.name}</p>
+          {!view.stolen.shown && (
+            <button className="btn light small" onClick={e => { e.stopPropagation(); act({ type: 'showStolen' }); setReveal(false); }}>
+              הצג לכולם
+            </button>
+          )}
+        </div>
+      )}
+      {flyers.map(f => (
+        <div key={f.key} className={`flycard r-${f.res}`} style={{
+          left: f.sx, top: f.sy, animationDelay: `${f.delay}ms`,
+          ['--dx' as string]: `${f.ex - f.sx}px`, ['--dy' as string]: `${f.ey - f.sy}px`,
+        }}>{RES_ICON[f.res]}</div>
+      ))}
       {view.phase === 'ended' && <WinOverlay view={view} />}
       {news.length > 0 && (
         <div className="news">
@@ -557,14 +613,30 @@ function DiscardSheet({ need, hand, act }: { need: number; hand: ResMap; act: Ac
   );
 }
 
-function StealSheet({ view, act }: { view: GameView; act: Act }) {
+function StealSheet({ view, act, onStolen }: { view: GameView; act: Act; onStolen: () => void }) {
+  const [target, setTarget] = useState<string | null>(view.stealFrom.length === 1 ? view.stealFrom[0] : null);
+  const [busy, setBusy] = useState(false);
+  const victim = view.players.find(p => p.id === target);
+  if (victim) return (
+    <SheetFrame title={`בחר קלף מ${victim.name}`}>
+      <div className="steal-fan">
+        {Array.from({ length: victim.resCount }, (_, i) => (
+          <button key={i} className="card-back" disabled={busy} style={{ animationDelay: `${i * 40}ms` }}
+            onClick={() => { setBusy(true); act({ type: 'steal', target: victim.id, pick: i }).then(ok => { if (ok) onStolen(); else setBusy(false); }); }}>
+            🏝️
+          </button>
+        ))}
+      </div>
+      {view.stealFrom.length > 1 && <button className="btn light small" style={{ marginTop: 10 }} onClick={() => setTarget(null)}>שחקן אחר</button>}
+    </SheetFrame>
+  );
   return (
     <SheetFrame title="ממי לגנוב?">
       <div className="list">
         {view.stealFrom.map(id => {
           const p = view.players.find(x => x.id === id)!;
           return (
-            <button key={id} className="opt" style={{ cursor: 'pointer', font: 'inherit' }} onClick={() => act({ type: 'steal', target: id })}>
+            <button key={id} className="opt" style={{ cursor: 'pointer', font: 'inherit' }} onClick={() => setTarget(id)}>
               <span className={`dot c-${p.color}`} />
               <span className="grow" style={{ textAlign: 'right', fontWeight: 800 }}>{p.name}</span>
               <span className="cost">⭐ {p.publicVp} נקודות · {p.resCount} קלפים</span>
