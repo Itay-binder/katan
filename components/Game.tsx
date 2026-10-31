@@ -37,6 +37,27 @@ export default function Game({ view, act, skew, react, roomId, token }: {
     return () => clearTimeout(t);
   }, [reveal]);
 
+  // Someone stole from you: the card leaves your hand and flies to the thief.
+  const [robbed, setRobbed] = useState<{ key: number; res: Res; thief: string; sx: number; sy: number; dx: number; dy: number } | null>(null);
+  const lastStolen = useRef(JSON.stringify(view.stolen ? { ...view.stolen, shown: 0 } : null));
+  useEffect(() => {
+    const sig = JSON.stringify(view.stolen ? { ...view.stolen, shown: 0 } : null);
+    if (sig === lastStolen.current) return;
+    lastStolen.current = sig;
+    const st = view.stolen;
+    if (!st || !me || st.from !== me.id || !st.res) return;
+    const slot = document.querySelector(`.bottom .hand .r-${st.res}`)?.getBoundingClientRect();
+    const chip = document.querySelector(`.pchip[data-pid="${st.by}"]`)?.getBoundingClientRect();
+    const sx = slot ? slot.left + slot.width / 2 : window.innerWidth / 2;
+    const sy = slot ? slot.top + slot.height / 2 : window.innerHeight - 160;
+    const ex = chip ? chip.left + chip.width / 2 : window.innerWidth / 2;
+    const ey = chip ? chip.top + chip.height / 2 : 30;
+    try { navigator.vibrate?.(250); } catch { /* not supported */ }
+    const key = Date.now();
+    setRobbed({ key, res: st.res, thief: view.players.find(p => p.id === st.by)?.name ?? '', sx, sy, dx: ex - sx, dy: ey - sy });
+    setTimeout(() => setRobbed(r => (r?.key === key ? null : r)), 2400);
+  }, [view.stolen, me, view.players]);
+
   // New cards fly from the board into the hand.
   const [flyers, setFlyers] = useState<{ key: number; res: Res; sx: number; sy: number; ex: number; ey: number; delay: number }[]>([]);
   const prevHand = useRef<ResMap | null>(me?.resources ?? null);
@@ -311,6 +332,14 @@ export default function Game({ view, act, skew, react, roomId, token }: {
           )}
         </div>
       )}
+      {robbed && (
+        <div key={robbed.key} className="robbed" aria-live="polite">
+          <div className="robbed-msg">🦹 {robbed.thief} גנב לך {RES_HE[robbed.res]}!</div>
+          <div className={`robbed-card r-${robbed.res}`} style={{
+            left: robbed.sx, top: robbed.sy, ['--dx' as string]: `${robbed.dx}px`, ['--dy' as string]: `${robbed.dy}px`,
+          }}>{RES_ICON[robbed.res]}</div>
+        </div>
+      )}
       {flyers.map(f => (
         <div key={f.key} className={`flycard r-${f.res}`} style={{
           left: f.sx, top: f.sy, animationDelay: `${f.delay}ms`,
@@ -368,7 +397,7 @@ function statusText(v: GameView, me: PublicPlayer | null, myTurn: boolean, build
 
 function PlayerChip({ p, view, turn, inCall, talking, offline }: { p: PublicPlayer; view: GameView; turn: boolean; inCall: boolean; talking: boolean; offline: boolean }) {
   return (
-    <div className={`pchip ${turn ? 'turn' : ''} ${talking ? 'talking' : ''} ${offline ? 'offline' : ''}`} title={offline ? 'לא מחובר' : ''}>
+    <div data-pid={p.id} className={`pchip ${turn ? 'turn' : ''} ${talking ? 'talking' : ''} ${offline ? 'offline' : ''}`} title={offline ? 'לא מחובר' : ''}>
       <span className={`dot c-${p.color}`} />
       <span>{p.name}{p.id === view.you ? ' (אתה)' : ''}{inCall ? ' 🎧' : ''}</span>
       <span className="vp">{p.publicVp}</span>

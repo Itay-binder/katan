@@ -1,5 +1,5 @@
 'use client';
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { EDGES, HEXES, VERTICES } from '@/lib/engine/geometry';
 import type { GameView, Res } from '@/lib/engine/types';
 
@@ -35,6 +35,20 @@ export default function Board({ view, mode }: { view: GameView; mode: PickMode }
   const wrap = useRef<HTMLDivElement>(null);
   const pointers = useRef(new Map<number, { x: number; y: number }>());
   const moved = useRef(0);
+
+  // The robber drops in when it moves; players it blocks see their tile flash red.
+  const [drop, setDrop] = useState<{ hex: number; mine: boolean; key: number } | null>(null);
+  const lastRobber = useRef(view.robber);
+  useEffect(() => {
+    if (view.robber === lastRobber.current) return;
+    lastRobber.current = view.robber;
+    const mine = !!view.you && HEXES[view.robber].vertices.some(v => view.buildings[v]?.owner === view.you);
+    if (mine) try { navigator.vibrate?.([120, 60, 120]); } catch { /* not supported */ }
+    const key = Date.now();
+    setDrop({ hex: view.robber, mine, key });
+    // Not cleared on re-render: the board updates often and must not cut the animation short.
+    setTimeout(() => setDrop(d => (d?.key === key ? null : d)), 2600);
+  }, [view.robber, view.you, view.buildings]);
 
   const colorOf = useMemo(() => Object.fromEntries(view.players.map(p => [p.id, PLAYER_FILL[p.color]])), [view.players]);
 
@@ -172,14 +186,22 @@ export default function Board({ view, mode }: { view: GameView; mode: PickMode }
         {(() => {
           const h = HEXES[view.robber];
           const x = h.x * S + 22, y = h.y * S + 2;
+          const dropping = drop?.hex === view.robber;
           return (
-            <g filter="url(#sh)">
+            <g key={dropping ? drop!.key : 'still'} filter="url(#sh)" className={dropping ? 'robber-drop' : ''}>
               <ellipse cx={x} cy={y + 12} rx={9} ry={4} fill="#1d1d1d" />
               <path d={`M${x - 8},${y + 12} Q${x - 9},${y - 2} ${x},${y - 4} Q${x + 9},${y - 2} ${x + 8},${y + 12} Z`} fill="#2b2b2b" />
               <circle cx={x} cy={y - 8} r={6} fill="#2b2b2b" />
             </g>
           );
         })()}
+
+        {drop && (
+          <g key={`hit${drop.key}`} pointerEvents="none">
+            <polygon points={pts(HEXES[drop.hex].vertices)} className={drop.mine ? 'robber-hit mine' : 'robber-hit'} />
+            <circle cx={HEXES[drop.hex].x * S + 22} cy={HEXES[drop.hex].y * S + 14} r={10} className="robber-dust" />
+          </g>
+        )}
 
         {/* pick targets */}
         {mode?.kind === 'hex' && HEXES.filter(h => targets.has(h.id)).map(h => (
