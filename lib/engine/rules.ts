@@ -242,6 +242,7 @@ function reduce(s: GameState, pid: string, a: Action, now: number, rng: Rng): vo
       const p = cur(s);
       s.buildings[a.vertex] = { owner: p.id, type: 'settlement' };
       s.lastSetupVertex = a.vertex;
+      log(s, `${p.name} הניח יישוב ליד ${spotName(s, a.vertex)}`);
       if (s.setupStep >= s.players.length) {
         const got: Partial<ResMap> = {};
         for (const h of VERTICES[a.vertex].hexes) {
@@ -257,6 +258,7 @@ function reduce(s: GameState, pid: string, a: Action, now: number, rng: Rng): vo
       requireTurn(s, pid, 'setupRoad');
       if (!EDGES[a.edge] || !canPlaceSetupRoad(s, a.edge, s.lastSetupVertex)) throw new GameError('הדרך חייבת לצאת מהיישוב החדש');
       s.roads[a.edge] = pid;
+      log(s, `${cur(s).name} הניח דרך`);
       s.setupStep++;
       const n = s.players.length;
       if (s.setupStep >= 2 * n) {
