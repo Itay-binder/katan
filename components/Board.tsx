@@ -22,6 +22,10 @@ export const RES_ICON: Record<Res | 'desert', string> = {
 const S = 60; // svg px per hex unit
 const TILE_W = Math.sqrt(3) * S; // pointy-top hex width
 const pts = (vs: number[]) => vs.map(v => `${VERTICES[v].x * S},${VERTICES[v].y * S}`).join(' ');
+// Tiles are drawn slightly smaller than their slot, so a band of sand separates neighbours like real tiles.
+const INSET = 0.915;
+const tilePts = (h: { x: number; y: number; vertices: number[] }) =>
+  h.vertices.map(v => `${(h.x + (VERTICES[v].x - h.x) * INSET) * S},${(h.y + (VERTICES[v].y - h.y) * INSET) * S}`).join(' ');
 
 // Fixed board frame (with room for ports outside the coast)
 const PAD = 0.98 * S;
@@ -145,13 +149,11 @@ export default function Board({ view, mode }: { view: GameView; mode: PickMode }
           return (
             <g key={`h${h.id}`}>
               {/* painted tile: the colour shows while the picture loads */}
-              <clipPath id={`hc${h.id}`}><polygon points={pts(h.vertices)} /></clipPath>
-              <polygon points={pts(h.vertices)} fill={TERRAIN_FILL[hx.terrain]} />
+              <clipPath id={`hc${h.id}`}><polygon points={tilePts(h)} /></clipPath>
+              <polygon points={tilePts(h)} fill={TERRAIN_FILL[hx.terrain]} />
               <image href={`/tiles/${hx.terrain}.webp`} x={cx - TILE_W / 2} y={cy - S} width={TILE_W} height={2 * S}
                 preserveAspectRatio="xMidYMid slice" clipPath={`url(#hc${h.id})`} />
-              {/* clear border between tiles: light sand band with a dark gold line inside it */}
-              <polygon points={pts(h.vertices)} fill="none" stroke="#f6e7bf" strokeWidth={6} strokeLinejoin="round" />
-              <polygon points={pts(h.vertices)} fill="none" stroke="#9c7420" strokeWidth={1.6} strokeLinejoin="round" />
+              <polygon points={tilePts(h)} fill="none" stroke="#8a6418" strokeWidth={2} strokeLinejoin="round" />
               {hx.number && (
                 <g filter="url(#sh)">
                   <circle cx={cx} cy={cy + 6} r={17} fill="#fbf4e2" stroke="#c9a347" strokeWidth={1.5} />

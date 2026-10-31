@@ -71,6 +71,20 @@ export default function Game({ view, act, skew, react, roomId, token }: {
     setTimeout(() => setRobbed(r => (r?.key === key ? null : r)), 2400);
   }, [view.stolen, me, view.players]);
 
+  // A development card you just bought is shown big for two seconds.
+  const [bought, setBought] = useState<{ key: number; type: DevType } | null>(null);
+  const devCount = useRef(me?.dev?.length ?? 0);
+  useEffect(() => {
+    const dev = me?.dev ?? [];
+    const before = devCount.current;
+    devCount.current = dev.length;
+    const last = dev[dev.length - 1];
+    if (dev.length !== before + 1 || !last || last.boughtTurn !== view.turnNo) return;
+    const key = Date.now();
+    setBought({ key, type: last.type });
+    setTimeout(() => setBought(b => (b?.key === key ? null : b)), 2200);
+  }, [me?.dev, view.turnNo]);
+
   // Every roll shows big tumbling dice to everyone. A roll is spotted by its new log line.
   const rollLine = () => [...view.log].reverse().find(l => / הטיל \d+$/.test(l.text));
   const lastRoll = useRef(rollLine()?.id ?? 0);
@@ -409,6 +423,7 @@ export default function Game({ view, act, skew, react, roomId, token }: {
         </div>
       )}
       {roll && <DiceShow key={roll.key} d={roll.d} />}
+      {bought && <DevReveal key={bought.key} type={bought.type} ready={devReady({ type: bought.type, boughtTurn: view.turnNo }, view.turnNo)} />}
       {flyers.map(f => (
         <div key={f.key} className={`flycard r-${f.res}`} style={{
           left: f.sx, top: f.sy, animationDelay: `${f.delay}ms`,
@@ -462,6 +477,29 @@ function statusText(v: GameView, me: PublicPlayer | null, myTurn: boolean, build
     case 'steal': return `${n} בוחר ממי לגנוב`;
     default: return `התור של ${n}`;
   }
+}
+
+const DEV_DESC: Record<DevType, string> = {
+  knight: 'מזיזים את השודד וגונבים קלף. 3 אבירים ומעלה = צבא גדול.',
+  roadBuilding: 'בונים 2 דרכים בחינם.',
+  yearOfPlenty: 'לוקחים 2 משאבים לבחירתך מהבנק.',
+  monopoly: 'בוחרים משאב, וכל השחקנים נותנים לך את כל מה שיש להם ממנו.',
+  vp: 'נקודה נסתרת. נספרת אוטומטית.',
+};
+const DEV_ICON: Record<DevType, string> = { knight: '⚔️', roadBuilding: '🛤️', yearOfPlenty: '🎁', monopoly: '💰', vp: '🏆' };
+
+/** The development card you just bought, shown big for a moment. */
+function DevReveal({ type, ready }: { type: DevType; ready: boolean }) {
+  return (
+    <div className="steal-reveal dev-reveal">
+      <div className={`dev-card dev-${type}`}>
+        <div className="dev-ico">{DEV_ICON[type]}</div>
+        <div className="dev-name">{DEV_HE[type]}</div>
+        <div className="dev-desc">{DEV_DESC[type]}</div>
+      </div>
+      <p>קנית {DEV_HE[type]}{type === 'vp' ? '' : ready ? ' · אפשר לשחק כבר עכשיו' : ' · אפשר לשחק מהתור הבא'}</p>
+    </div>
+  );
 }
 
 const PIPS: Record<number, number[]> = { 1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8] };
@@ -698,13 +736,7 @@ function DevSheet({ view, meId, myTurn, act, close }: { view: GameView; meId: st
   const [picking, setPicking] = useState<null | 'yearOfPlenty' | 'monopoly'>(null);
   const [chosen, setChosen] = useState<Res[]>([]);
   const types: DevType[] = ['knight', 'roadBuilding', 'yearOfPlenty', 'monopoly', 'vp'];
-  const DESC: Record<DevType, string> = {
-    knight: 'מזיזים את השודד וגונבים קלף. 3 אבירים ומעלה = צבא גדול.',
-    roadBuilding: 'בונים 2 דרכים בחינם.',
-    yearOfPlenty: 'לוקחים 2 משאבים לבחירתך מהבנק.',
-    monopoly: 'בוחרים משאב, וכל השחקנים נותנים לך את כל מה שיש להם ממנו.',
-    vp: 'נקודה נסתרת. נספרת אוטומטית.',
-  };
+  const DESC = DEV_DESC;
   const canPlay = (t: DevType) => {
     if (t === 'vp' || !myTurn || view.devPlayed) return false;
     if (!cards.some(c => c.type === t && devReady(c, view.turnNo))) return false;
