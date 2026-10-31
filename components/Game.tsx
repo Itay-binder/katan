@@ -35,6 +35,20 @@ export default function Game({ view, act, skew, react }: { view: GameView; act: 
   useEffect(() => { if (!myTurn || view.sub !== 'main') setBuild(null); }, [myTurn, view.sub]);
   useEffect(() => { if (!myTurn && (sheet === 'build' || sheet === 'trade')) setSheet(null); }, [myTurn, sheet]);
 
+  // Big "your turn" banner each time the turn comes to you.
+  const [yourTurn, setYourTurn] = useState(false);
+  const wasMine = useRef(myTurn);
+  useEffect(() => {
+    if (myTurn && !wasMine.current) {
+      setYourTurn(true);
+      try { navigator.vibrate?.(200); } catch { /* not supported */ }
+      const t = setTimeout(() => setYourTurn(false), 2200);
+      wasMine.current = myTurn;
+      return () => clearTimeout(t);
+    }
+    wasMine.current = myTurn;
+  }, [myTurn]);
+
   // Turn clock ran out: any seated player nudges the server (the current player first, others a bit later).
   const sentFor = useRef<number | null>(null);
   useEffect(() => {
@@ -134,6 +148,11 @@ export default function Game({ view, act, skew, react }: { view: GameView; act: 
       {myDiscard > 0 && view.sub === 'discard' && me && <DiscardSheet need={myDiscard} hand={me.resources!} act={act} />}
       {myTurn && view.sub === 'steal' && <StealSheet view={view} act={act} />}
       {view.phase === 'ended' && <WinOverlay view={view} />}
+      {yourTurn && view.phase === 'playing' && me && (
+        <div className="yourturn" onClick={() => setYourTurn(false)}>
+          <div className={`yt c-${me.color}`}>התור שלך!</div>
+        </div>
+      )}
     </div>
   );
 }
