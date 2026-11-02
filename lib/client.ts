@@ -32,8 +32,8 @@ export function parseRoomCode(input: string): string | null {
 export const showCode = (id: string) => `${id.slice(0, 4)} ${id.slice(4)}`.toUpperCase();
 
 export const api = {
-  create: (turnSeconds: number | null) =>
-    call<{ id: string }>('/api/rooms', { method: 'POST', body: JSON.stringify({ turnSeconds }) }),
+  create: (turnSeconds: number | null, winVp: number) =>
+    call<{ id: string }>('/api/rooms', { method: 'POST', body: JSON.stringify({ turnSeconds, winVp }) }),
   get: (id: string, token: string | null) =>
     call<{ view: GameView; version: number }>(`/api/rooms/${id}`, { token }),
   join: (id: string, name: string) =>

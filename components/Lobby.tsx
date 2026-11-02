@@ -53,7 +53,8 @@ export default function Lobby({ view, act, join }: {
           <span className="code-copy">{codeCopied ? 'הועתק ✓' : '📋 העתק'}</span>
         </button>
         <p style={{ margin: '10px 0 0', color: 'var(--ink-soft)', fontSize: 14 }}>
-          טיימר לתור: {view.turnSeconds ? `${view.turnSeconds} שניות` : 'בלי טיימר'}
+          {(view.winVp ?? 10) === 6 ? 'ספרינט: מנצחים ב־6 נקודות' : 'משחק רגיל: מנצחים ב־10 נקודות'}
+          {' · '}טיימר לתור: {view.turnSeconds ? `${view.turnSeconds} שניות` : 'בלי טיימר'}
         </p>
       </div>
 

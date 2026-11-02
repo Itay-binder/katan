@@ -346,6 +346,26 @@ describe('scoring', () => {
     expect(s.phase).toBe('ended');
     expect(s.winner).toBe(me.id);
   });
+
+  it('sprint ends at 6 points, not before', () => {
+    const rng = seeded(1);
+    const s = createGame('room', null, 0, rng, 6);
+    joinGame(s, 'a', rng); joinGame(s, 'b', rng);
+    applyAction(s, s.hostId, { type: 'start' }, 0, rng);
+    playSetup(s);
+    const me = s.players[0];
+    s.sub = 'main';
+    me.dev.push(...Array(3).fill({ type: 'vp', boughtTurn: 0 }));
+    me.resources = { ...emptyRes(), wool: 2, grain: 2, ore: 2 };
+    s.devDeck.push('knight', 'knight');
+    expect(totalVp(s, me.id)).toBe(5);
+    applyAction(s, me.id, { type: 'buyDev' }, 0);
+    expect(s.phase).toBe('playing');
+    me.dev.push({ type: 'vp', boughtTurn: 0 });
+    applyAction(s, me.id, { type: 'buyDev' }, 0);
+    expect(s.phase).toBe('ended');
+    expect(s.winner).toBe(me.id);
+  });
 });
 
 describe('view', () => {

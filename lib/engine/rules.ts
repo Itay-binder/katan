@@ -13,6 +13,8 @@ import {
 export const MAX_PLAYERS = 4;
 export const MIN_PLAYERS = 2;
 export const WIN_VP = 10;
+/** Sprint: the same game, first to 6 points wins. */
+export const SPRINT_VP = 6;
 /** House rule: a 7 in the first rounds is rolled again; the robber only wakes up afterwards. */
 export const SAFE_ROUNDS = 3;
 const LOG_KEEP = 60;
@@ -26,13 +28,13 @@ const randId = (rng: Rng, n = 10) => {
 
 export function newRoomId(rng: Rng = Math.random) { return randId(rng, 8); }
 
-export function createGame(id: string, turnSeconds: number | null, now: number, rng: Rng = Math.random): GameState {
+export function createGame(id: string, turnSeconds: number | null, now: number, rng: Rng = Math.random, winVp = WIN_VP): GameState {
   const devDeck: DevType[] = shuffle([
     ...Array(14).fill('knight'), ...Array(5).fill('vp'),
     ...Array(2).fill('roadBuilding'), ...Array(2).fill('yearOfPlenty'), ...Array(2).fill('monopoly'),
   ], rng);
   return {
-    id, createdAt: now, hostId: '', turnSeconds,
+    id, createdAt: now, hostId: '', turnSeconds, winVp,
     phase: 'lobby', players: [],
     ...generateBoard(rng),
     buildings: {}, roads: {},
@@ -140,7 +142,7 @@ function updateLargestArmy(s: GameState, p: Player) {
 function checkWin(s: GameState) {
   if (s.phase !== 'playing') return;
   const p = cur(s);
-  if (totalVp(s, p.id) >= WIN_VP) {
+  if (totalVp(s, p.id) >= (s.winVp ?? WIN_VP)) {
     s.phase = 'ended'; s.winner = p.id; s.deadline = null; s.trade = null; s.endedAt = Date.now();
     log(s, `${p.name} ניצח עם ${totalVp(s, p.id)} נקודות!`);
   }

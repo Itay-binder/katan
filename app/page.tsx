@@ -7,10 +7,14 @@ import InstallButton from '@/components/InstallButton';
 const TIMERS: { v: number | null; label: string }[] = [
   { v: null, label: 'בלי' }, { v: 60, label: '60 שנ׳' }, { v: 90, label: '90 שנ׳' }, { v: 120, label: '120 שנ׳' },
 ];
+const MODES = [
+  { v: 10, label: 'רגיל · עד 10' }, { v: 6, label: 'ספרינט · עד 6' },
+];
 
 export default function Home() {
   const router = useRouter();
   const [timer, setTimer] = useState<number | null>(null);
+  const [winVp, setWinVp] = useState(10);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [code, setCode] = useState('');
@@ -47,7 +51,7 @@ export default function Home() {
   async function create() {
     setBusy(true); setErr('');
     try {
-      const { id } = await api.create(timer);
+      const { id } = await api.create(timer, winVp);
       router.push(`/r/${id}`);
     } catch (e) { setErr((e as Error).message); setBusy(false); }
   }
@@ -61,6 +65,12 @@ export default function Home() {
         <h1 className="logo">Katan</h1>
         <p className="tagline">מתיישבים עם החברים, כל אחד מהטלפון שלו</p>
         <div className="card">
+          <p className="field-label">סוג משחק</p>
+          <div className="seg" style={{ gridTemplateColumns: '1fr 1fr' }}>
+            {MODES.map(m => (
+              <button key={m.v} className={winVp === m.v ? 'on' : ''} onClick={() => setWinVp(m.v)}>{m.label}</button>
+            ))}
+          </div>
           <p className="field-label">טיימר לכל תור</p>
           <div className="seg">
             {TIMERS.map(t => (

@@ -42,6 +42,8 @@ export interface GameState {
   createdAt: number;
   hostId: string;
   turnSeconds: number | null;
+  /** Points needed to win: 10 normally, 6 in sprint. Missing on rooms opened before sprint existed. */
+  winVp?: number;
   phase: 'lobby' | 'playing' | 'ended';
   players: Player[];
   hexes: { terrain: Terrain; number: number | null }[];
