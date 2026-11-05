@@ -20,6 +20,7 @@ export interface VoiceState {
 
 const ICE: RTCIceServer[] = [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }];
 const SPEAK_LEVEL = 0.02;
+const RETRIES = 2;
 
 interface Peer { pc: RTCPeerConnection; audio: HTMLAudioElement; analyser?: AnalyserNode; pending: RTCIceCandidateInit[] }
 
@@ -30,16 +31,19 @@ export class VoiceRoom {
   private localAnalyser?: AnalyserNode;
   private members = new Set<string>();
   private failed = new Set<string>();
+  private retries = new Map<string, number>();
   private speaking: string[] = [];
   private loud = new Map<string, number>();
   private meter: ReturnType<typeof setInterval> | null = null;
   private off: () => void;
+  private onPageHide = () => this.leave();
   private st: Omit<VoiceState, 'members' | 'speaking' | 'failed'> = { joined: false, joining: false, muted: false, error: '' };
 
   constructor(private room: string, private me: string, private onChange: (s: VoiceState) => void) {
     this.off = onRoomEvent<Sig>('voice', m => { this.handle(m).catch(e => console.warn('voice', e)); });
     // Ask who is already talking (twice, in case the channel was still connecting).
     this.send({ kind: 'who', from: me });
+    window.addEventListener('pagehide', this.onPageHide);
     setTimeout(() => this.send({ kind: 'who', from: me }), 2500);
   }
 
@@ -59,8 +63,12 @@ export class VoiceRoom {
       this.local = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
     } catch {
       this.ctx?.close().catch(() => {}); this.ctx = null;
-      this.st = { ...this.st, joining: false, error: 'אין גישה למיקרופון. צריך לאשר מיקרופון בדפדפן.' }; this.emit();
-      setTimeout(() => { this.st = { ...this.st, error: '' }; this.emit(); }, 4000);
+      // Browsers built into apps (WhatsApp, Instagram) often have no microphone at all.
+      const error = navigator.mediaDevices
+        ? 'אין גישה למיקרופון. צריך לאשר מיקרופון, ואם הקישור נפתח מתוך ווצאפ לפתוח אותו בכרום או בספארי.'
+        : 'הדפדפן הזה לא תומך בשיחה. צריך לפתוח את הקישור בכרום או בספארי.';
+      this.st = { ...this.st, joining: false, error }; this.emit();
+      setTimeout(() => { this.st = { ...this.st, error: '' }; this.emit(); }, 6000);
       return;
     }
     this.ctx?.resume().catch(() => {});
@@ -70,6 +78,8 @@ export class VoiceRoom {
     this.failed.clear();
     this.meter = setInterval(() => this.measure(), 150);
     this.send({ kind: 'join', from: this.me });
+    // Signalling isn't guaranteed: say it again, so anyone who missed it still connects.
+    for (const ms of [3000, 8000]) setTimeout(() => { if (this.st.joined) this.send({ kind: 'here', from: this.me }); }, ms);
     this.emit();
   }
 
@@ -86,6 +96,7 @@ export class VoiceRoom {
     this.members.delete(this.me);
     this.speaking = [];
     this.failed.clear();
+    this.retries.clear();
     this.st = { ...this.st, joined: false, muted: false };
     this.emit();
   }
@@ -98,7 +109,7 @@ export class VoiceRoom {
     this.emit();
   }
 
-  destroy() { this.leave(); this.off(); }
+  destroy() { window.removeEventListener('pagehide', this.onPageHide); this.leave(); this.off(); }
 
   private async handle(m: Sig) {
     if (m.from === this.me || ('to' in m && m.to && m.to !== this.me)) return;
@@ -110,7 +121,12 @@ export class VoiceRoom {
       case 'here':
         this.members.add(m.from);
         if (this.st.joined) {
-          if (m.kind === 'join') this.send({ kind: 'here', from: this.me, to: m.from });
+          if (m.kind === 'join') {
+            // They came back (refresh, dropped line): whatever we hold for them is dead.
+            this.closePeer(m.from);
+            this.retries.delete(m.from);
+            this.send({ kind: 'here', from: this.me, to: m.from });
+          }
           // Exactly one side of each pair starts the connection: the smaller id.
           if (this.me < m.from && !this.peers.has(m.from)) await this.call(m.from);
         }
@@ -176,10 +192,21 @@ export class VoiceRoom {
       p.analyser = this.analyse(e.streams[0]);
     };
     pc.onconnectionstatechange = () => {
-      if (pc.connectionState === 'connected') { this.failed.delete(id); this.emit(); }
-      if (pc.connectionState === 'failed') { this.failed.add(id); this.closePeer(id); this.emit(); }
+      if (pc.connectionState === 'connected') { this.failed.delete(id); this.retries.delete(id); this.emit(); }
+      if (pc.connectionState === 'failed') { this.closePeer(id); this.retry(id); this.emit(); }
     };
     return p;
+  }
+
+  private retry(id: string) {
+    const tries = this.retries.get(id) ?? 0;
+    if (tries >= RETRIES) { this.failed.add(id); return; }
+    this.retries.set(id, tries + 1);
+    setTimeout(() => {
+      if (!this.st.joined || !this.members.has(id) || this.peers.has(id)) return;
+      if (this.me < id) this.call(id).catch(e => console.warn('voice', e));
+      else this.send({ kind: 'here', from: this.me, to: id });
+    }, 1500);
   }
 
   private closePeer(id: string) {
